@@ -1,0 +1,118 @@
+/* ── 전체 페이지 ── */
+body {
+  font-family: '맑은 고딕', sans-serif;
+  background-color: #f5f0eb;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #5c4033;
+}
+
+/* ── 섹션 카드 ── */
+section {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  color: #7b5e52;
+  margin-top: 0;
+}
+
+/* ── 입력 요소 ── */
+input,
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+textarea {
+  height: 120px;
+  resize: vertical;
+}
+
+/* ── 버튼 공통 ── */
+button {
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 10px 20px;
+  background-color: #a1887f;
+}
+
+button:hover {
+  background-color: #8d6e63;
+}
+
+/* ── 버튼 종류별 색상 ── */
+.edit-btn    { background-color: #90a4ae; padding: 4px 12px; font-size: 12px; margin-right: 6px; }
+.delete-btn  { background-color: #e57373; padding: 4px 12px; font-size: 12px; }
+.confirm-btn { background-color: #81c784; padding: 4px 12px; font-size: 12px; margin-right: 6px; }
+.cancel-btn  { background-color: #bdbdbd; padding: 4px 12px; font-size: 12px; }
+
+.edit-btn:hover    { background-color: #607d8b; }
+.delete-btn:hover  { background-color: #c62828; }
+.confirm-btn:hover { background-color: #388e3c; }
+.cancel-btn:hover  { background-color: #757575; }
+
+/* ── 일기 목록 ── */
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+li {
+  border: 1px solid #e0d6cf;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #5c4033;
+}
+
+li p {
+  margin: 0 0 6px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+li small {
+  color: #aaa;
+  font-size: 12px;
+}
+
+/* ── 수정 폼 입력창 ── */
+.edit-input,
+.edit-textarea {
+  border-color: #a1887f;
+  margin-bottom: 8px;
+}
+
+.edit-textarea {
+  height: 80px;
+}

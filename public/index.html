@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>나의 다이어리</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h1>나의 다이어리</h1>
+
+  <!-- 일기 작성 영역 -->
+  <section>
+    <h2>일기 쓰기</h2>
+    <input type="text" id="title-input" placeholder="제목을 입력하세요" />
+    <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
+    <button id="save-btn">저장하기</button>
+  </section>
+
+  <!-- 일기 목록 영역 -->
+  <section>
+    <h2>일기 목록</h2>
+    <ul id="diary-list"></ul>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
