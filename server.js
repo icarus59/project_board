@@ -18,14 +18,29 @@ app.use(express.static('public'));
 //  DB 연결 & 테이블 초기화
 // ════════════════════════════════
 
-const pool = mysql.createPool({
-  host:     process.env.DB_HOST,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
+let pool;
 
 async function initDB() {
+  // 1단계: DB 이름 없이 먼저 연결
+  const conn = await mysql.createConnection({
+    host:     process.env.DB_HOST,
+    user:     process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+  });
+
+  // 2단계: DB가 없으면 자동 생성
+  await conn.execute(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`);
+  await conn.end();
+
+  // 3단계: 생성한 DB로 pool 연결
+  pool = mysql.createPool({
+    host:     process.env.DB_HOST,
+    user:     process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+
+  // 4단계: 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS diaries (
       id      INT           AUTO_INCREMENT PRIMARY KEY,
