@@ -38,6 +38,7 @@ function showApp() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('app-section').style.display  = 'block';
   document.getElementById('welcome-text').textContent   = `${getUsername()}님, 안녕하세요!`;
+  loadPhotos();
   renderDiaries();
 }
 
@@ -139,6 +140,102 @@ function renderEditForm(li, diary) {
 }
 
 // ════════════════════════════════
+//  사진 슬라이드
+// ════════════════════════════════
+
+let photos  = [];  // 사진 목록
+let current = 0;   // 현재 보고 있는 사진 번호
+
+// 사진 목록 서버에서 가져오기
+async function fetchPhotos() {
+  const response = await fetch(`${API_URL}/api/images`, {
+    headers: authHeaders(),
+  });
+  return await response.json();
+}
+
+// 슬라이드 화면 업데이트
+function renderSlide() {
+  const img     = document.getElementById('slide-img');
+  const noMsg   = document.getElementById('no-photo-msg');
+  const counter = document.getElementById('slide-counter');
+
+  if (photos.length === 0) {
+    // 사진이 없을 때
+    img.style.display   = 'none';
+    noMsg.style.display = 'block';
+    counter.textContent = '';
+  } else {
+    // 사진이 있을 때
+    img.src             = photos[current].data;
+    img.style.display   = 'block';
+    noMsg.style.display = 'none';
+    counter.textContent = `${current + 1} / ${photos.length}`;
+  }
+}
+
+// 사진 불러오고 슬라이드 표시
+async function loadPhotos() {
+  photos  = await fetchPhotos();
+  current = 0;
+  renderSlide();
+}
+
+// ◀ 이전 버튼
+document.getElementById('prev-btn').addEventListener('click', function () {
+  if (photos.length === 0) return;
+  current = (current - 1 + photos.length) % photos.length;
+  renderSlide();
+});
+
+// ▶ 다음 버튼
+document.getElementById('next-btn').addEventListener('click', function () {
+  if (photos.length === 0) return;
+  current = (current + 1) % photos.length;
+  renderSlide();
+});
+
+// 사진 올리기
+document.getElementById('photo-input').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  // 사진을 base64 텍스트로 변환
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const base64 = e.target.result;
+
+    await fetch(`${API_URL}/api/images`, {
+      method:  'POST',
+      headers: authHeaders(),
+      body:    JSON.stringify({ data: base64 }),
+    });
+
+    await loadPhotos();
+    current = photos.length - 1;  // 방금 올린 사진으로 이동
+    renderSlide();
+  };
+  reader.readAsDataURL(file);
+
+  this.value = '';  // 같은 파일 다시 올릴 수 있게 초기화
+});
+
+// 현재 사진 삭제
+document.getElementById('delete-photo-btn').addEventListener('click', async function () {
+  if (photos.length === 0) return;
+
+  const id = photos[current].id;
+  await fetch(`${API_URL}/api/images/${id}`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+
+  await loadPhotos();
+  current = Math.min(current, photos.length - 1);
+  renderSlide();
+});
+
+// ════════════════════════════════
 //  이벤트 처리 — 인증
 // ════════════════════════════════
 
@@ -182,10 +279,8 @@ document.getElementById('register-btn').addEventListener('click', async function
     return;
   }
 
+  document.getElementById('register-modal').style.display = 'none';
   alert('회원가입 성공! 로그인해주세요.');
-  // 로그인 화면으로 전환
-  document.getElementById('register-form').style.display = 'none';
-  document.getElementById('login-form').style.display    = 'block';
 });
 
 // 로그아웃 버튼
@@ -194,17 +289,23 @@ document.getElementById('logout-btn').addEventListener('click', function () {
   showAuth();
 });
 
-// 회원가입 ↔ 로그인 화면 전환
+// 회원가입 모달 열기 / 닫기
 document.getElementById('show-register').addEventListener('click', function (e) {
   e.preventDefault();
-  document.getElementById('login-form').style.display    = 'none';
-  document.getElementById('register-form').style.display = 'block';
+  document.getElementById('register-username').value = '';
+  document.getElementById('register-password').value = '';
+  document.getElementById('register-modal').style.display = 'flex';
 });
 
-document.getElementById('show-login').addEventListener('click', function (e) {
-  e.preventDefault();
-  document.getElementById('register-form').style.display = 'none';
-  document.getElementById('login-form').style.display    = 'block';
+document.getElementById('modal-close-btn').addEventListener('click', function () {
+  document.getElementById('register-modal').style.display = 'none';
+});
+
+// 모달 바깥 클릭하면 닫기
+document.getElementById('register-modal').addEventListener('click', function (e) {
+  if (e.target === this) {
+    this.style.display = 'none';
+  }
 });
 
 // ════════════════════════════════

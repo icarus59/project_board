@@ -44,6 +44,54 @@ h1 {
   font-weight: bold;
 }
 
+/* ── 회원가입 모달 ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 360px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-box h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.modal-box button:not(.modal-close) {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  color: #aaa;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: none;
+  color: #555;
+}
+
 /* ── 앱 헤더 (로그인 후) ── */
 .app-header {
   display: flex;
@@ -170,6 +218,86 @@ li p {
 li small {
   color: #aaa;
   font-size: 12px;
+}
+
+/* ── 사진 슬라이드 ── */
+#slideshow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#slide-display {
+  width: 100%;
+  height: 260px;
+  background-color: #f0e8e0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#slide-display img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#no-photo-msg {
+  color: #aaa;
+  font-size: 14px;
+  margin: 0;
+}
+
+#prev-btn,
+#next-btn {
+  background-color: #d7ccc8;
+  font-size: 28px;
+  padding: 8px 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+#prev-btn:hover,
+#next-btn:hover {
+  background-color: #a1887f;
+}
+
+#slide-counter {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+
+#photo-btns {
+  display: flex;
+  gap: 10px;
+}
+
+#upload-label {
+  display: inline-block;
+  background-color: #a1887f;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#upload-label:hover {
+  background-color: #8d6e63;
+}
+
+#delete-photo-btn {
+  background-color: #e57373;
+}
+
+#delete-photo-btn:hover {
+  background-color: #c62828;
 }
 
 /* ── 수정 폼 입력창 ── */

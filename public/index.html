@@ -7,7 +7,7 @@
 </head>
 <body>
 
-  <!-- 로그인 / 회원가입 화면 -->
+  <!-- 로그인 화면 -->
   <div id="auth-section">
     <h1>나의 다이어리</h1>
 
@@ -18,13 +18,16 @@
       <button id="login-btn">로그인</button>
       <p class="auth-switch">계정이 없으신가요? <a href="#" id="show-register">회원가입</a></p>
     </div>
+  </div>
 
-    <div class="auth-box" id="register-form" style="display:none">
+  <!-- 회원가입 모달 -->
+  <div id="register-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <button id="modal-close-btn" class="modal-close">✕</button>
       <h2>회원가입</h2>
       <input type="text"     id="register-username" placeholder="아이디" />
       <input type="password" id="register-password" placeholder="비밀번호" />
-      <button id="register-btn">가입하기</button>
-      <p class="auth-switch">이미 계정이 있으신가요? <a href="#" id="show-login">로그인</a></p>
+      <button id="register-btn">가입 완료</button>
     </div>
   </div>
 
@@ -38,6 +41,33 @@
         <button id="logout-btn">로그아웃</button>
       </div>
     </div>
+
+    <!-- 사진 슬라이드 영역 -->
+    <section id="photo-section">
+      <h2>사진</h2>
+
+      <!-- 슬라이드 창 -->
+      <div id="slideshow">
+        <button id="prev-btn">&#8249;</button>
+        <div id="slide-display">
+          <p id="no-photo-msg">아직 사진이 없어요. 업로드해보세요!</p>
+          <img id="slide-img" src="" alt="사진" style="display:none" />
+        </div>
+        <button id="next-btn">&#8250;</button>
+      </div>
+
+      <!-- 사진 개수 표시 -->
+      <p id="slide-counter"></p>
+
+      <!-- 업로드 / 삭제 버튼 -->
+      <div id="photo-btns">
+        <label id="upload-label">
+          사진 올리기
+          <input type="file" id="photo-input" accept="image/*" style="display:none" />
+        </label>
+        <button id="delete-photo-btn">현재 사진 삭제</button>
+      </div>
+    </section>
 
     <section>
       <h2>일기 쓰기</h2>
