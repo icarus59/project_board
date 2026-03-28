@@ -7,21 +7,51 @@
 </head>
 <body>
 
-  <h1>나의 다이어리</h1>
+  <!-- 로그인 / 회원가입 화면 -->
+  <div id="auth-section">
+    <h1>나의 다이어리</h1>
 
-  <!-- 일기 작성 영역 -->
-  <section>
-    <h2>일기 쓰기</h2>
-    <input type="text" id="title-input" placeholder="제목을 입력하세요" />
-    <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
-    <button id="save-btn">저장하기</button>
-  </section>
+    <div class="auth-box" id="login-form">
+      <h2>로그인</h2>
+      <input type="text"     id="login-username" placeholder="아이디" />
+      <input type="password" id="login-password" placeholder="비밀번호" />
+      <button id="login-btn">로그인</button>
+      <p class="auth-switch">계정이 없으신가요? <a href="#" id="show-register">회원가입</a></p>
+    </div>
 
-  <!-- 일기 목록 영역 -->
-  <section>
-    <h2>일기 목록</h2>
-    <ul id="diary-list"></ul>
-  </section>
+    <div class="auth-box" id="register-form" style="display:none">
+      <h2>회원가입</h2>
+      <input type="text"     id="register-username" placeholder="아이디" />
+      <input type="password" id="register-password" placeholder="비밀번호" />
+      <button id="register-btn">가입하기</button>
+      <p class="auth-switch">이미 계정이 있으신가요? <a href="#" id="show-login">로그인</a></p>
+    </div>
+  </div>
+
+  <!-- 다이어리 메인 화면 (로그인 후 표시) -->
+  <div id="app-section" style="display:none">
+
+    <div class="app-header">
+      <h1>나의 다이어리</h1>
+      <div class="header-right">
+        <span id="welcome-text"></span>
+        <button id="logout-btn">로그아웃</button>
+      </div>
+    </div>
+
+    <section>
+      <h2>일기 쓰기</h2>
+      <input type="text" id="title-input" placeholder="제목을 입력하세요" />
+      <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
+      <button id="save-btn">저장하기</button>
+    </section>
+
+    <section>
+      <h2>일기 목록</h2>
+      <ul id="diary-list"></ul>
+    </section>
+
+  </div>
 
   <script src="app.js"></script>
 </body>

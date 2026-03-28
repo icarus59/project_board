@@ -12,6 +12,72 @@ h1 {
   color: #5c4033;
 }
 
+/* ── 로그인 / 회원가입 박스 ── */
+.auth-box {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.auth-box h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.auth-box button {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-bottom: 0;
+  color: #888;
+  font-size: 13px;
+}
+
+.auth-switch a {
+  color: #a1887f;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* ── 앱 헤더 (로그인 후) ── */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.app-header h1 {
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.header-right span {
+  color: #7b5e52;
+  font-size: 14px;
+}
+
+#logout-btn {
+  background-color: #bdbdbd;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+#logout-btn:hover {
+  background-color: #757575;
+}
+
 /* ── 섹션 카드 ── */
 section {
   background-color: #fff;
