@@ -14,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'my-diary-secret-key';
 // ════════════════════════════════
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
 // ════════════════════════════════
@@ -61,6 +61,16 @@ async function initDB() {
       title   VARCHAR(255)  NOT NULL,
       content TEXT          NOT NULL,
       date    VARCHAR(50)   NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // 6단계: images 테이블 생성
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS images (
+      id      INT           AUTO_INCREMENT PRIMARY KEY,
+      user_id INT           NOT NULL,
+      data    LONGTEXT      NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
@@ -192,6 +202,45 @@ app.delete('/api/diaries/:id', authMiddleware, async function (req, res) {
   const id = Number(req.params.id);
   await pool.execute(
     'DELETE FROM diaries WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// ════════════════════════════════
+//  사진 API — 로그인 필요
+// ════════════════════════════════
+
+// 내 사진 목록 조회
+app.get('/api/images', authMiddleware, async function (req, res) {
+  const [rows] = await pool.execute(
+    'SELECT id, data FROM images WHERE user_id = ? ORDER BY id ASC',
+    [req.userId]
+  );
+  res.json(rows);
+});
+
+// 사진 업로드
+app.post('/api/images', authMiddleware, async function (req, res) {
+  const { data } = req.body;
+
+  if (!data) {
+    return res.status(400).json({ message: '사진 데이터가 없습니다.' });
+  }
+
+  const [result] = await pool.execute(
+    'INSERT INTO images (user_id, data) VALUES (?, ?)',
+    [req.userId, data]
+  );
+
+  res.status(201).json({ id: result.insertId, data });
+});
+
+// 사진 삭제
+app.delete('/api/images/:id', authMiddleware, async function (req, res) {
+  const id = Number(req.params.id);
+  await pool.execute(
+    'DELETE FROM images WHERE id = ? AND user_id = ?',
     [id, req.userId]
   );
   res.json({ message: '삭제되었습니다.' });
