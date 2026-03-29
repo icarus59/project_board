@@ -106,37 +106,77 @@ async function deleteDiary(id) {
 // ════════════════════════════════
 
 const diaryList = document.getElementById('diary-list');
+let editingId = null;
 
-async function renderDiaries() {
+async function renderDiaries(searchTerm = '', searchType = 'title') {
   const diaries = await fetchDiaries();
   diaryList.innerHTML = '';
 
-  diaries.forEach(function (diary) {
-    const li = document.createElement('li');
-    li.innerHTML = `
-      <div class="card-header">
-        <h3>${diary.title}</h3>
-        <div>
-          <button class="edit-btn"   data-id="${diary.id}">수정</button>
+  const filtered = searchTerm
+    ? diaries.filter(d =>
+        (searchType === 'title' ? d.title : d.content)
+          .toLowerCase().includes(searchTerm.toLowerCase()))
+    : diaries;
+
+  if (filtered.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="4" class="board-empty">등록된 일기가 없어요.</td>`;
+    diaryList.appendChild(tr);
+    return;
+  }
+
+  filtered.forEach(function (diary) {
+    const tr = document.createElement('tr');
+    tr.dataset.id      = diary.id;
+    tr.dataset.title   = diary.title;
+    tr.dataset.content = diary.content;
+    tr.dataset.date    = diary.date;
+    tr.innerHTML = `
+      <td class="col-check"><input type="checkbox" class="row-check" data-id="${diary.id}" /></td>
+      <td class="col-title">
+        <span class="diary-title">${diary.title}</span>
+        <span class="row-actions">
+          <button class="edit-btn" data-id="${diary.id}">수정</button>
           <button class="delete-btn" data-id="${diary.id}">삭제</button>
-        </div>
-      </div>
-      <p>${diary.content}</p>
-      <small>${diary.date}</small>
+        </span>
+      </td>
+      <td class="col-author">${getUsername()}</td>
+      <td class="col-date">${diary.date}</td>
     `;
-    diaryList.appendChild(li);
+    diaryList.appendChild(tr);
   });
 }
 
-function renderEditForm(li, diary) {
-  li.innerHTML = `
-    <input    class="edit-input"    data-id="${diary.id}" value="${diary.title}" />
-    <textarea class="edit-textarea" data-id="${diary.id}">${diary.content}</textarea>
-    <div>
-      <button class="confirm-btn" data-id="${diary.id}">완료</button>
-      <button class="cancel-btn">취소</button>
-    </div>
-  `;
+function openWritePanel(diary = null) {
+  const panel       = document.getElementById('write-panel');
+  const panelTitle  = document.getElementById('write-panel-title');
+  const titleInput  = document.getElementById('title-input');
+  const contentInput= document.getElementById('content-input');
+  const saveBtn     = document.getElementById('save-btn');
+
+  if (diary) {
+    editingId = diary.id;
+    panelTitle.textContent  = '일기 수정';
+    titleInput.value        = diary.title;
+    contentInput.value      = diary.content;
+    saveBtn.textContent     = '수정 완료';
+  } else {
+    editingId = null;
+    panelTitle.textContent  = '일기 쓰기';
+    titleInput.value        = '';
+    contentInput.value      = '';
+    saveBtn.textContent     = '저장하기';
+  }
+
+  panel.classList.add('open');
+  document.getElementById('write-toggle-btn').textContent = '닫기';
+  titleInput.focus();
+}
+
+function closeWritePanel() {
+  document.getElementById('write-panel').classList.remove('open');
+  document.getElementById('write-toggle-btn').textContent = '글쓰기';
+  editingId = null;
 }
 
 // ════════════════════════════════
@@ -312,7 +352,7 @@ document.getElementById('register-modal').addEventListener('click', function (e)
 //  이벤트 처리 — 일기
 // ════════════════════════════════
 
-// 저장 버튼
+// 저장 / 수정 완료 버튼
 document.getElementById('save-btn').addEventListener('click', async function () {
   const title   = document.getElementById('title-input').value.trim();
   const content = document.getElementById('content-input').value.trim();
@@ -322,46 +362,113 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     return;
   }
 
-  await createDiary(title, content);
-  await renderDiaries();
+  if (editingId) {
+    await updateDiary(editingId, title, content);
+  } else {
+    await createDiary(title, content);
+  }
 
-  document.getElementById('title-input').value   = '';
-  document.getElementById('content-input').value = '';
+  closeWritePanel();
+  await renderDiaries();
 });
 
-// 수정 / 완료 / 취소 / 삭제 버튼 (이벤트 위임)
+// 제목 클릭 → 내용 펼치기 / 접기
+function toggleDetail(tr) {
+  const next   = tr.nextElementSibling;
+  const isOpen = next && next.classList.contains('detail-row');
+
+  // 열려 있는 다른 행 모두 닫기
+  document.querySelectorAll('.detail-row').forEach(r => r.remove());
+  document.querySelectorAll('tr.row-active').forEach(r => r.classList.remove('row-active'));
+
+  if (!isOpen) {
+    const detailTr = document.createElement('tr');
+    detailTr.classList.add('detail-row');
+    detailTr.innerHTML = `
+      <td colspan="4">
+        <div class="detail-content">
+          <h3>${tr.dataset.title}</h3>
+          <p>${tr.dataset.content}</p>
+          <small>${tr.dataset.date}</small>
+        </div>
+      </td>
+    `;
+    tr.insertAdjacentElement('afterend', detailTr);
+    tr.classList.add('row-active');
+  }
+}
+
+// 수정 / 삭제 버튼 + 제목 클릭 (이벤트 위임)
 diaryList.addEventListener('click', async function (event) {
   const btn = event.target;
   const id  = Number(btn.dataset.id);
-  const li  = btn.closest('li');
+
+  // 제목 클릭
+  if (btn.classList.contains('diary-title')) {
+    toggleDetail(btn.closest('tr'));
+    return;
+  }
 
   if (btn.classList.contains('edit-btn')) {
     const diaries = await fetchDiaries();
     const diary   = diaries.find(d => d.id === id);
-    renderEditForm(li, diary);
-  }
-
-  if (btn.classList.contains('confirm-btn')) {
-    const newTitle   = li.querySelector('.edit-input').value.trim();
-    const newContent = li.querySelector('.edit-textarea').value.trim();
-
-    if (!newTitle || !newContent) {
-      alert('제목과 내용을 모두 입력해주세요!');
-      return;
-    }
-
-    await updateDiary(id, newTitle, newContent);
-    await renderDiaries();
-  }
-
-  if (btn.classList.contains('cancel-btn')) {
-    await renderDiaries();
+    openWritePanel(diary);
   }
 
   if (btn.classList.contains('delete-btn')) {
+    if (!confirm('이 일기를 삭제하시겠습니까?')) return;
     await deleteDiary(id);
     await renderDiaries();
   }
+});
+
+// 글쓰기 토글 버튼
+document.getElementById('write-toggle-btn').addEventListener('click', function () {
+  const panel = document.getElementById('write-panel');
+  if (panel.classList.contains('open')) {
+    closeWritePanel();
+  } else {
+    openWritePanel();
+  }
+});
+
+// 취소 버튼
+document.getElementById('cancel-write-btn').addEventListener('click', function () {
+  closeWritePanel();
+});
+
+// 검색 버튼
+document.getElementById('search-btn').addEventListener('click', async function () {
+  const searchTerm = document.getElementById('search-input').value.trim();
+  const searchType = document.getElementById('search-type').value;
+  await renderDiaries(searchTerm, searchType);
+});
+
+// 검색창 엔터키
+document.getElementById('search-input').addEventListener('keydown', async function (e) {
+  if (e.key === 'Enter') {
+    const searchType = document.getElementById('search-type').value;
+    await renderDiaries(this.value.trim(), searchType);
+  }
+});
+
+// 전체 선택 체크박스
+document.getElementById('check-all').addEventListener('change', function () {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+});
+
+// 선택 삭제 버튼
+document.getElementById('bulk-delete-btn').addEventListener('click', async function () {
+  const checked = document.querySelectorAll('.row-check:checked');
+  if (checked.length === 0) {
+    alert('삭제할 항목을 선택해주세요.');
+    return;
+  }
+  if (!confirm(`${checked.length}개의 일기를 삭제하시겠습니까?`)) return;
+
+  const ids = Array.from(checked).map(cb => Number(cb.dataset.id));
+  await Promise.all(ids.map(id => deleteDiary(id)));
+  await renderDiaries();
 });
 
 // ════════════════════════════════

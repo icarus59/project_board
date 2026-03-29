@@ -2,7 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>나의 다이어리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -69,16 +73,51 @@
       </div>
     </section>
 
-    <section>
-      <h2>일기 쓰기</h2>
-      <input type="text" id="title-input" placeholder="제목을 입력하세요" />
-      <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
-      <button id="save-btn">저장하기</button>
-    </section>
+    <!-- 게시판: 글쓰기 + 목록 통합 -->
+    <section class="board-section">
 
-    <section>
-      <h2>일기 목록</h2>
-      <ul id="diary-list"></ul>
+      <!-- 글쓰기 / 수정 패널 (기본 숨김) -->
+      <div class="board-write" id="write-panel">
+        <h2 id="write-panel-title">일기 쓰기</h2>
+        <input type="text" id="title-input" placeholder="제목을 입력하세요" />
+        <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
+        <div class="write-footer">
+          <button id="cancel-write-btn" class="cancel-btn">취소</button>
+          <button id="save-btn">저장하기</button>
+        </div>
+      </div>
+
+      <!-- 검색 바 -->
+      <div class="board-search">
+        <div class="search-group">
+          <select id="search-type">
+            <option value="title">제목</option>
+            <option value="content">내용</option>
+          </select>
+          <input type="text" id="search-input" placeholder="" />
+          <button id="search-btn">검색</button>
+        </div>
+      </div>
+
+      <!-- 게시판 테이블 -->
+      <table class="board-table">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="check-all" /></th>
+            <th class="col-title">제목</th>
+            <th class="col-author">작성자</th>
+            <th class="col-date">날짜</th>
+          </tr>
+        </thead>
+        <tbody id="diary-list"></tbody>
+      </table>
+
+      <!-- 하단 버튼 -->
+      <div class="board-footer">
+        <button id="bulk-delete-btn" class="delete-btn">삭제</button>
+        <button id="write-toggle-btn">글쓰기</button>
+      </div>
+
     </section>
 
   </div>
