@@ -207,7 +207,7 @@ function renderSlide() {
     counter.textContent = '';
   } else {
     // 사진이 있을 때
-    img.src             = photos[current].data;
+    img.src             = photos[current].url;
     img.style.display   = 'block';
     noMsg.style.display = 'none';
     counter.textContent = `${current + 1} / ${photos.length}`;
@@ -235,27 +235,56 @@ document.getElementById('next-btn').addEventListener('click', function () {
   renderSlide();
 });
 
+// 이미지 압축 함수 (최대 1280px, 품질 80%)
+function compressImage(file) {
+  return new Promise(function (resolve) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const img = new Image();
+      img.onload = function () {
+        const MAX = 1280;
+        let w = img.width;
+        let h = img.height;
+
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+        canvas.toBlob(function (blob) {
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.8);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // 사진 올리기
 document.getElementById('photo-input').addEventListener('change', async function () {
   const file = this.files[0];
   if (!file) return;
 
-  // 사진을 base64 텍스트로 변환
-  const reader = new FileReader();
-  reader.onload = async function (e) {
-    const base64 = e.target.result;
+  const compressed = await compressImage(file);
 
-    await fetch(`${API_URL}/api/images`, {
-      method:  'POST',
-      headers: authHeaders(),
-      body:    JSON.stringify({ data: base64 }),
-    });
+  const formData = new FormData();
+  formData.append('image', compressed);
 
-    await loadPhotos();
-    current = photos.length - 1;  // 방금 올린 사진으로 이동
-    renderSlide();
-  };
-  reader.readAsDataURL(file);
+  await fetch(`${API_URL}/api/images`, {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${getToken()}` },
+    body:    formData,
+  });
+
+  await loadPhotos();
+  current = photos.length - 1;  // 방금 올린 사진으로 이동
+  renderSlide();
 
   this.value = '';  // 같은 파일 다시 올릴 수 있게 초기화
 });
