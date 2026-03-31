@@ -69,8 +69,7 @@ async function initDB() {
     )
   `);
 
-  // 5단계: diaries 테이블 재생성 (user_id 포함)
-  await pool.execute(`DROP TABLE IF EXISTS diaries`);
+  // 5단계: diaries 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS diaries (
       id      INT           AUTO_INCREMENT PRIMARY KEY,
