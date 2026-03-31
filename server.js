@@ -354,6 +354,17 @@ app.post('/api/family', authMiddleware, upload.single('image'), async function (
   res.status(201).json({ id: result.insertId, url, description, date, file_type: fileType });
 });
 
+// 가족앨범 설명 수정
+app.patch('/api/family/:id', authMiddleware, async function (req, res) {
+  const id          = Number(req.params.id);
+  const { description } = req.body;
+  await pool.execute(
+    'UPDATE family_photos SET description = ? WHERE id = ? AND user_id = ?',
+    [description, id, req.userId]
+  );
+  res.json({ message: '수정되었습니다.' });
+});
+
 // 가족앨범 사진 삭제
 app.delete('/api/family/:id', authMiddleware, async function (req, res) {
   const id = Number(req.params.id);
