@@ -4,6 +4,23 @@ const mysql   = require('mysql2/promise');
 const cors    = require('cors');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
+const multer  = require('multer');
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },  // 50MB 제한
+});
+
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId:     process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
 
 const app        = express();
 const PORT       = process.env.PORT || 3000;
@@ -68,11 +85,30 @@ async function initDB() {
   // 6단계: images 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS images (
-      id      INT           AUTO_INCREMENT PRIMARY KEY,
-      user_id INT           NOT NULL,
-      data    LONGTEXT      NOT NULL,
+      id       INT          AUTO_INCREMENT PRIMARY KEY,
+      user_id  INT          NOT NULL,
+      url      VARCHAR(500) NOT NULL,
+      key_name VARCHAR(200) NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
+  `);
+
+  // 7단계: family_photos 테이블 생성
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS family_photos (
+      id          INT          AUTO_INCREMENT PRIMARY KEY,
+      user_id     INT          NOT NULL,
+      url         VARCHAR(500) NOT NULL,
+      key_name    VARCHAR(200) NOT NULL,
+      description VARCHAR(300) NOT NULL DEFAULT '',
+      date        VARCHAR(50)  NOT NULL,
+      file_type   VARCHAR(10)  NOT NULL DEFAULT 'image',
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  // 기존 테이블에 file_type 컬럼 없으면 추가
+  await pool.execute(`
+    ALTER TABLE family_photos ADD COLUMN IF NOT EXISTS file_type VARCHAR(10) NOT NULL DEFAULT 'image'
   `);
 
   console.log('DB 연결 성공!');
@@ -214,33 +250,129 @@ app.delete('/api/diaries/:id', authMiddleware, async function (req, res) {
 // 내 사진 목록 조회
 app.get('/api/images', authMiddleware, async function (req, res) {
   const [rows] = await pool.execute(
-    'SELECT id, data FROM images WHERE user_id = ? ORDER BY id ASC',
+    'SELECT id, url FROM images WHERE user_id = ? ORDER BY id ASC',
     [req.userId]
   );
   res.json(rows);
 });
 
 // 사진 업로드
-app.post('/api/images', authMiddleware, async function (req, res) {
-  const { data } = req.body;
-
-  if (!data) {
+app.post('/api/images', authMiddleware, upload.single('image'), async function (req, res) {
+  if (!req.file) {
     return res.status(400).json({ message: '사진 데이터가 없습니다.' });
   }
 
+  const keyName = `${req.userId}/${Date.now()}-${req.file.originalname}`;
+
+  const uploader = new Upload({
+    client: s3,
+    params: {
+      Bucket:      process.env.R2_BUCKET_NAME,
+      Key:         keyName,
+      Body:        req.file.buffer,
+      ContentType: req.file.mimetype,
+    },
+  });
+
+  await uploader.done();
+
+  const url = `${process.env.R2_PUBLIC_URL}/${keyName}`;
+
   const [result] = await pool.execute(
-    'INSERT INTO images (user_id, data) VALUES (?, ?)',
-    [req.userId, data]
+    'INSERT INTO images (user_id, url, key_name) VALUES (?, ?, ?)',
+    [req.userId, url, keyName]
   );
 
-  res.status(201).json({ id: result.insertId, data });
+  res.status(201).json({ id: result.insertId, url });
 });
 
 // 사진 삭제
 app.delete('/api/images/:id', authMiddleware, async function (req, res) {
   const id = Number(req.params.id);
+
+  const [rows] = await pool.execute(
+    'SELECT key_name FROM images WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+
+  if (rows.length > 0) {
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key:    rows[0].key_name,
+    }));
+  }
+
   await pool.execute(
     'DELETE FROM images WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// ════════════════════════════════
+//  가족앨범 API — 로그인 필요
+// ════════════════════════════════
+
+// 가족앨범 목록 조회
+app.get('/api/family', authMiddleware, async function (req, res) {
+  const [rows] = await pool.execute(
+    'SELECT id, url, description, date, file_type FROM family_photos WHERE user_id = ? ORDER BY id DESC',
+    [req.userId]
+  );
+  res.json(rows);
+});
+
+// 가족앨범 사진 업로드
+app.post('/api/family', authMiddleware, upload.single('image'), async function (req, res) {
+  if (!req.file) {
+    return res.status(400).json({ message: '사진 데이터가 없습니다.' });
+  }
+
+  const description = req.body.description || '';
+  const date        = new Date().toLocaleDateString('ko-KR');
+  const fileType    = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
+  const keyName     = `family/${req.userId}/${Date.now()}-${req.file.originalname}`;
+
+  const uploader = new Upload({
+    client: s3,
+    params: {
+      Bucket:      process.env.R2_BUCKET_NAME,
+      Key:         keyName,
+      Body:        req.file.buffer,
+      ContentType: req.file.mimetype,
+    },
+  });
+
+  await uploader.done();
+
+  const url = `${process.env.R2_PUBLIC_URL}/${keyName}`;
+
+  const [result] = await pool.execute(
+    'INSERT INTO family_photos (user_id, url, key_name, description, date, file_type) VALUES (?, ?, ?, ?, ?, ?)',
+    [req.userId, url, keyName, description, date, fileType]
+  );
+
+  res.status(201).json({ id: result.insertId, url, description, date, file_type: fileType });
+});
+
+// 가족앨범 사진 삭제
+app.delete('/api/family/:id', authMiddleware, async function (req, res) {
+  const id = Number(req.params.id);
+
+  const [rows] = await pool.execute(
+    'SELECT key_name FROM family_photos WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+
+  if (rows.length > 0) {
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key:    rows[0].key_name,
+    }));
+  }
+
+  await pool.execute(
+    'DELETE FROM family_photos WHERE id = ? AND user_id = ?',
     [id, req.userId]
   );
   res.json({ message: '삭제되었습니다.' });
