@@ -46,6 +46,15 @@
       </div>
     </div>
 
+    <!-- 탭 메뉴 -->
+    <div class="tab-menu">
+      <button class="tab-btn active" data-tab="diary">다이어리</button>
+      <button class="tab-btn" data-tab="family">가족앨범</button>
+    </div>
+
+    <!-- 다이어리 탭 -->
+    <div id="tab-diary">
+
     <!-- 사진 슬라이드 영역 -->
     <section id="photo-section">
       <h2>사진</h2>
@@ -119,6 +128,37 @@
       </div>
 
     </section>
+
+    </div><!-- /tab-diary -->
+
+    <!-- 가족앨범 탭 -->
+    <div id="tab-family" style="display:none">
+      <section id="family-section">
+        <div class="family-header">
+          <h2>가족앨범</h2>
+          <label class="family-upload-label">
+            사진/동영상 추가
+            <input type="file" id="family-photo-input" accept="image/*,video/*" style="display:none" />
+          </label>
+        </div>
+
+        <!-- 업로드 폼 (사진/동영상 선택 후 표시) -->
+        <div id="family-upload-form" style="display:none">
+          <img id="family-preview-img" src="" alt="미리보기" style="display:none" />
+          <video id="family-preview-video" controls style="display:none"></video>
+          <input type="text" id="family-description" placeholder="설명을 입력하세요 (선택)" />
+          <div class="family-form-btns">
+            <button id="family-cancel-btn" class="cancel-btn">취소</button>
+            <button id="family-save-btn">저장하기</button>
+          </div>
+        </div>
+
+        <!-- 갤러리 그리드 -->
+        <div id="family-gallery">
+          <p id="family-empty-msg" class="family-empty">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
+        </div>
+      </section>
+    </div><!-- /tab-family -->
 
   </div>
 

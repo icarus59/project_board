@@ -501,6 +501,135 @@ document.getElementById('bulk-delete-btn').addEventListener('click', async funct
 });
 
 // ════════════════════════════════
+//  탭 전환
+// ════════════════════════════════
+
+document.querySelectorAll('.tab-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+
+    const tab = this.dataset.tab;
+    document.getElementById('tab-diary').style.display  = tab === 'diary'  ? 'block' : 'none';
+    document.getElementById('tab-family').style.display = tab === 'family' ? 'block' : 'none';
+
+    if (tab === 'family') loadFamilyPhotos();
+  });
+});
+
+// ════════════════════════════════
+//  가족앨범
+// ════════════════════════════════
+
+let familyFile = null;
+
+async function loadFamilyPhotos() {
+  const response = await fetch(`${API_URL}/api/family`, { headers: authHeaders() });
+  const photos   = await response.json();
+  const gallery  = document.getElementById('family-gallery');
+  const emptyMsg = document.getElementById('family-empty-msg');
+
+  gallery.innerHTML = '';
+
+  if (photos.length === 0) {
+    gallery.appendChild(emptyMsg);
+    emptyMsg.style.display = 'block';
+    return;
+  }
+
+  photos.forEach(function (photo) {
+    const card    = document.createElement('div');
+    card.className = 'family-card';
+    const media   = photo.file_type === 'video'
+      ? `<video src="${photo.url}" controls preload="metadata"></video>`
+      : `<img src="${photo.url}" alt="가족사진" loading="lazy" />`;
+
+    card.innerHTML = `
+      ${media}
+      <div class="family-card-info">
+        ${photo.description ? `<p class="family-card-desc">${photo.description}</p>` : ''}
+        <p class="family-card-date">${photo.date}</p>
+      </div>
+      <button class="family-card-delete" data-id="${photo.id}">삭제</button>
+    `;
+    gallery.appendChild(card);
+  });
+}
+
+// 사진/동영상 선택 → 미리보기 표시
+document.getElementById('family-photo-input').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const isVideo = file.type.startsWith('video/');
+  const previewImg   = document.getElementById('family-preview-img');
+  const previewVideo = document.getElementById('family-preview-video');
+
+  if (isVideo) {
+    if (file.size > 50 * 1024 * 1024) {
+      alert('동영상은 50MB 이하만 업로드 가능합니다.');
+      this.value = '';
+      return;
+    }
+    familyFile = file;
+    previewImg.style.display   = 'none';
+    previewVideo.style.display = 'block';
+    previewVideo.src = URL.createObjectURL(file);
+  } else {
+    familyFile = await compressImage(file);
+    previewVideo.style.display = 'none';
+    previewImg.style.display   = 'block';
+    const reader = new FileReader();
+    reader.onload = function (e) { previewImg.src = e.target.result; };
+    reader.readAsDataURL(familyFile);
+  }
+
+  document.getElementById('family-upload-form').style.display = 'block';
+  document.getElementById('family-description').value = '';
+  this.value = '';
+});
+
+// 저장 버튼
+document.getElementById('family-save-btn').addEventListener('click', async function () {
+  if (!familyFile) return;
+
+  const description = document.getElementById('family-description').value.trim();
+  const formData    = new FormData();
+  formData.append('image', familyFile);
+  formData.append('description', description);
+
+  await fetch(`${API_URL}/api/family`, {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${getToken()}` },
+    body:    formData,
+  });
+
+  document.getElementById('family-upload-form').style.display = 'none';
+  familyFile = null;
+  await loadFamilyPhotos();
+});
+
+// 취소 버튼
+document.getElementById('family-cancel-btn').addEventListener('click', function () {
+  document.getElementById('family-upload-form').style.display = 'none';
+  familyFile = null;
+});
+
+// 삭제 버튼 (이벤트 위임)
+document.getElementById('family-gallery').addEventListener('click', async function (e) {
+  if (!e.target.classList.contains('family-card-delete')) return;
+  if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+
+  const id = e.target.dataset.id;
+  await fetch(`${API_URL}/api/family/${id}`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+
+  await loadFamilyPhotos();
+});
+
+// ════════════════════════════════
 //  초기 실행 — 토큰 있으면 바로 앱 화면으로
 // ════════════════════════════════
 
