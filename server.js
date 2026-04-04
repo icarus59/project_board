@@ -63,11 +63,16 @@ async function initDB() {
   // 4단계: users 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS users (
-      id       INT          AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(50)  NOT NULL UNIQUE,
-      password VARCHAR(255) NOT NULL
+      id         INT          AUTO_INCREMENT PRIMARY KEY,
+      username   VARCHAR(50)  NOT NULL UNIQUE,
+      password   VARCHAR(255) NOT NULL,
+      phone      VARCHAR(20)  NOT NULL DEFAULT '',
+      birth_date DATE         NULL
     )
   `);
+  // 기존 테이블에 phone, birth_date 컬럼 없으면 추가
+  await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''`);
+  await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE NULL`);
 
   // 5단계: diaries 테이블 생성
   await pool.execute(`
@@ -139,7 +144,7 @@ function authMiddleware(req, res, next) {
 
 // 회원가입
 app.post('/api/auth/register', async function (req, res) {
-  const { username, password } = req.body;
+  const { username, password, phone, birthDate } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ message: '아이디와 비밀번호를 입력해주세요.' });
@@ -155,8 +160,8 @@ app.post('/api/auth/register', async function (req, res) {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   await pool.execute(
-    'INSERT INTO users (username, password) VALUES (?, ?)',
-    [username, hashedPassword]
+    'INSERT INTO users (username, password, phone, birth_date) VALUES (?, ?, ?, ?)',
+    [username, hashedPassword, phone || '', birthDate || null]
   );
 
   res.status(201).json({ message: '회원가입 성공!' });
