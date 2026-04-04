@@ -59,11 +59,11 @@ async function login(username, password) {
   });
 }
 
-async function register(username, password) {
+async function register(username, password, phone, birthDate) {
   return await fetch(`${API_URL}/api/auth/register`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ username, password }),
+    body:    JSON.stringify({ username, password, phone, birthDate }),
   });
 }
 
@@ -332,15 +332,17 @@ document.getElementById('login-btn').addEventListener('click', async function ()
 
 // 회원가입 버튼
 document.getElementById('register-btn').addEventListener('click', async function () {
-  const username = document.getElementById('register-username').value.trim();
-  const password = document.getElementById('register-password').value.trim();
+  const username  = document.getElementById('register-username').value.trim();
+  const password  = document.getElementById('register-password').value.trim();
+  const phone     = document.getElementById('register-phone').value.trim();
+  const birthDate = document.getElementById('register-birth-date').value;
 
   if (!username || !password) {
     alert('아이디와 비밀번호를 입력해주세요!');
     return;
   }
 
-  const response = await register(username, password);
+  const response = await register(username, password, phone, birthDate);
   const data     = await response.json();
 
   if (!response.ok) {
@@ -361,8 +363,10 @@ document.getElementById('logout-btn').addEventListener('click', function () {
 // 회원가입 모달 열기 / 닫기
 document.getElementById('show-register').addEventListener('click', function (e) {
   e.preventDefault();
-  document.getElementById('register-username').value = '';
-  document.getElementById('register-password').value = '';
+  document.getElementById('register-username').value   = '';
+  document.getElementById('register-password').value   = '';
+  document.getElementById('register-phone').value      = '';
+  document.getElementById('register-birth-date').value = '';
   document.getElementById('register-modal').style.display = 'flex';
 });
 
@@ -521,40 +525,132 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
 //  가족앨범
 // ════════════════════════════════
 
-let familyFile = null;
+let familyFile    = null;
+let familyPhotos  = [];
+let familyCurrent = 0;
+let familyModalId = null;
 
 async function loadFamilyPhotos() {
   const response = await fetch(`${API_URL}/api/family`, { headers: authHeaders() });
-  const photos   = await response.json();
-  const gallery  = document.getElementById('family-gallery');
+  familyPhotos   = await response.json();
+  familyCurrent  = 0;
+  renderFamilyCarousel();
+}
+
+function renderFamilyCarousel() {
+  const track    = document.getElementById('family-carousel-track');
   const emptyMsg = document.getElementById('family-empty-msg');
+  const counter  = document.getElementById('family-counter');
+  const carousel = document.getElementById('family-carousel');
 
-  gallery.innerHTML = '';
+  track.innerHTML = '';
 
-  if (photos.length === 0) {
-    gallery.appendChild(emptyMsg);
-    emptyMsg.style.display = 'block';
+  if (familyPhotos.length === 0) {
+    carousel.style.display  = 'none';
+    emptyMsg.style.display  = 'block';
+    counter.textContent     = '';
     return;
   }
 
-  photos.forEach(function (photo) {
-    const card    = document.createElement('div');
-    card.className = 'family-card';
-    const media   = photo.file_type === 'video'
-      ? `<video src="${photo.url}" controls preload="metadata"></video>`
+  carousel.style.display = 'flex';
+  emptyMsg.style.display = 'none';
+  counter.textContent    = `${familyCurrent + 1} / ${familyPhotos.length}`;
+
+  // 현재, 이전, 다음 인덱스
+  const total = familyPhotos.length;
+  const indices = total === 1
+    ? [familyCurrent]
+    : total === 2
+      ? [familyCurrent, (familyCurrent + 1) % total]
+      : [
+          (familyCurrent - 1 + total) % total,
+          familyCurrent,
+          (familyCurrent + 1) % total,
+        ];
+
+  indices.forEach(function (idx, pos) {
+    const photo   = familyPhotos[idx];
+    const isCenter = (total === 1) || (total === 2 ? pos === 0 : pos === 1);
+    const item    = document.createElement('div');
+    item.className = 'carousel-item' + (isCenter ? ' carousel-center' : ' carousel-side');
+    item.dataset.id = photo.id;
+
+    const media = photo.file_type === 'video'
+      ? `<video src="${photo.url}" preload="metadata"></video>`
       : `<img src="${photo.url}" alt="가족사진" loading="lazy" />`;
 
-    card.innerHTML = `
+    item.innerHTML = `
       ${media}
-      <div class="family-card-info">
-        ${photo.description ? `<p class="family-card-desc">${photo.description}</p>` : ''}
-        <p class="family-card-date">${photo.date}</p>
-      </div>
-      <button class="family-card-delete" data-id="${photo.id}">삭제</button>
+      ${isCenter && photo.description ? `<div class="carousel-desc">${photo.description}</div>` : ''}
     `;
-    gallery.appendChild(card);
+
+    item.addEventListener('click', function () {
+      if (isCenter) {
+        openFamilyModal(photo);
+      } else {
+        familyCurrent = idx;
+        renderFamilyCarousel();
+      }
+    });
+
+    track.appendChild(item);
   });
 }
+
+function openFamilyModal(photo) {
+  familyModalId = photo.id;
+  const mediaEl = document.getElementById('family-modal-media');
+  mediaEl.innerHTML = photo.file_type === 'video'
+    ? `<video src="${photo.url}" controls></video>`
+    : `<img src="${photo.url}" alt="가족사진" />`;
+
+  document.getElementById('family-modal-date').textContent     = photo.date;
+  document.getElementById('family-modal-desc-input').value     = photo.description || '';
+  document.getElementById('family-modal').style.display        = 'flex';
+}
+
+// 모달 닫기
+document.getElementById('family-modal-close').addEventListener('click', function () {
+  document.getElementById('family-modal').style.display = 'none';
+});
+document.getElementById('family-modal').addEventListener('click', function (e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// 모달 수정 저장
+document.getElementById('family-modal-save-btn').addEventListener('click', async function () {
+  const description = document.getElementById('family-modal-desc-input').value.trim();
+  await fetch(`${API_URL}/api/family/${familyModalId}`, {
+    method:  'PATCH',
+    headers: authHeaders(),
+    body:    JSON.stringify({ description }),
+  });
+  document.getElementById('family-modal').style.display = 'none';
+  await loadFamilyPhotos();
+});
+
+// 모달 삭제
+document.getElementById('family-modal-delete-btn').addEventListener('click', async function () {
+  if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+  await fetch(`${API_URL}/api/family/${familyModalId}`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+  document.getElementById('family-modal').style.display = 'none';
+  await loadFamilyPhotos();
+});
+
+// 캐러셀 이전/다음 버튼
+document.getElementById('family-prev-btn').addEventListener('click', function () {
+  if (familyPhotos.length === 0) return;
+  familyCurrent = (familyCurrent - 1 + familyPhotos.length) % familyPhotos.length;
+  renderFamilyCarousel();
+});
+document.getElementById('family-next-btn').addEventListener('click', function () {
+  if (familyPhotos.length === 0) return;
+  familyCurrent = (familyCurrent + 1) % familyPhotos.length;
+  renderFamilyCarousel();
+});
 
 // 사진/동영상 선택 → 미리보기 표시
 document.getElementById('family-photo-input').addEventListener('change', async function () {
@@ -613,20 +709,6 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
 document.getElementById('family-cancel-btn').addEventListener('click', function () {
   document.getElementById('family-upload-form').style.display = 'none';
   familyFile = null;
-});
-
-// 삭제 버튼 (이벤트 위임)
-document.getElementById('family-gallery').addEventListener('click', async function (e) {
-  if (!e.target.classList.contains('family-card-delete')) return;
-  if (!confirm('이 사진을 삭제하시겠습니까?')) return;
-
-  const id = e.target.dataset.id;
-  await fetch(`${API_URL}/api/family/${id}`, {
-    method:  'DELETE',
-    headers: authHeaders(),
-  });
-
-  await loadFamilyPhotos();
 });
 
 // ════════════════════════════════

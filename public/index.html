@@ -29,8 +29,10 @@
     <div class="modal-box">
       <button id="modal-close-btn" class="modal-close">✕</button>
       <h2>회원가입</h2>
-      <input type="text"     id="register-username" placeholder="아이디" />
-      <input type="password" id="register-password" placeholder="비밀번호" />
+      <input type="text"     id="register-username"   placeholder="아이디" />
+      <input type="password" id="register-password"   placeholder="비밀번호" />
+      <input type="tel"      id="register-phone"      placeholder="전화번호 (예: 010-1234-5678)" />
+      <input type="date"     id="register-birth-date" placeholder="생년월일" />
       <button id="register-btn">가입 완료</button>
     </div>
   </div>
@@ -153,12 +155,32 @@
           </div>
         </div>
 
-        <!-- 갤러리 그리드 -->
-        <div id="family-gallery">
-          <p id="family-empty-msg" class="family-empty">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
+        <!-- 캐러셀 -->
+        <div id="family-carousel">
+          <button id="family-prev-btn">&#8249;</button>
+          <div id="family-carousel-track"></div>
+          <button id="family-next-btn">&#8250;</button>
         </div>
+        <p id="family-empty-msg" class="family-empty" style="display:none">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
+        <p id="family-counter" class="family-counter"></p>
       </section>
     </div><!-- /tab-family -->
+
+    <!-- 가족앨범 상세 모달 -->
+    <div id="family-modal" class="modal-overlay" style="display:none">
+      <div class="family-modal-box">
+        <button id="family-modal-close" class="modal-close">✕</button>
+        <div id="family-modal-media"></div>
+        <div class="family-modal-info">
+          <p id="family-modal-date" class="family-card-date"></p>
+          <input type="text" id="family-modal-desc-input" placeholder="설명을 입력하세요" />
+          <div class="family-modal-btns">
+            <button id="family-modal-delete-btn" class="delete-btn">삭제</button>
+            <button id="family-modal-save-btn">수정 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 

@@ -848,6 +848,165 @@ tr.row-active > td {
   box-shadow: 0 3px 10px rgba(141,110,99,0.25);
 }
 
+/* ── 가족앨범 캐러셀 ── */
+#family-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0 8px;
+  overflow: hidden;
+}
+
+#family-prev-btn,
+#family-next-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--primary);
+  font-size: 22px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  padding: 0;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+#family-prev-btn:hover,
+#family-next-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--accent);
+}
+
+#family-carousel-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.carousel-item {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.carousel-center {
+  width: 60%;
+  max-width: 340px;
+  box-shadow: var(--shadow-md);
+  z-index: 2;
+}
+
+.carousel-side {
+  width: 18%;
+  max-width: 100px;
+  opacity: 0.55;
+  filter: grayscale(30%);
+  transform: scale(0.88);
+}
+
+.carousel-center:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.carousel-side:hover {
+  opacity: 0.75;
+}
+
+.carousel-item img,
+.carousel-item video {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.carousel-side img,
+.carousel-side video {
+  height: 140px;
+}
+
+@media (max-width: 480px) {
+  .carousel-item img,
+  .carousel-item video {
+    height: 160px;
+  }
+
+  .carousel-side img,
+  .carousel-side video {
+    height: 110px;
+  }
+
+  #family-prev-btn,
+  #family-next-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+}
+
+.carousel-desc {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.55));
+  color: white;
+  font-size: 12px;
+  padding: 20px 12px 10px;
+  line-height: 1.4;
+}
+
+.family-counter {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin: 4px 0 0;
+}
+
+/* ── 가족앨범 모달 ── */
+.family-modal-box {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.25s ease both;
+  overflow: hidden;
+}
+
+.family-modal-box img,
+.family-modal-box video {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+
+.family-modal-info {
+  padding: 16px 20px 20px;
+}
+
+.family-modal-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 /* ── 가족앨범 ── */
 .family-header {
   display: flex;
