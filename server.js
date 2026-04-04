@@ -167,6 +167,47 @@ app.post('/api/auth/register', async function (req, res) {
   res.status(201).json({ message: '회원가입 성공!' });
 });
 
+// 내 정보 조회
+app.get('/api/auth/me', authMiddleware, async function (req, res) {
+  const [rows] = await pool.execute(
+    'SELECT username, phone, birth_date FROM users WHERE id = ?',
+    [req.userId]
+  );
+  if (rows.length === 0) {
+    return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+  }
+  res.json(rows[0]);
+});
+
+// 회원 탈퇴
+app.delete('/api/auth/me', authMiddleware, async function (req, res) {
+  // 1. 다이어리 사진 R2 삭제
+  const [images] = await pool.execute(
+    'SELECT key_name FROM images WHERE user_id = ?',
+    [req.userId]
+  );
+  for (const img of images) {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: img.key_name }));
+  }
+
+  // 2. 가족앨범 R2 삭제
+  const [familyPhotos] = await pool.execute(
+    'SELECT key_name FROM family_photos WHERE user_id = ?',
+    [req.userId]
+  );
+  for (const fp of familyPhotos) {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: fp.key_name }));
+  }
+
+  // 3. DB 데이터 삭제 (순서 중요: 자식 테이블 먼저)
+  await pool.execute('DELETE FROM diaries      WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM images       WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM family_photos WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM users        WHERE id = ?',      [req.userId]);
+
+  res.json({ message: '탈퇴가 완료되었습니다.' });
+});
+
 // 로그인
 app.post('/api/auth/login', async function (req, res) {
   const { username, password } = req.body;
