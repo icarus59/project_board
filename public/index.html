@@ -37,6 +37,33 @@
     </div>
   </div>
 
+  <!-- 마이페이지 모달 -->
+  <div id="mypage-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <button id="mypage-close-btn" class="modal-close">✕</button>
+      <h2>마이페이지</h2>
+      <div class="mypage-info">
+        <div class="mypage-row">
+          <span class="mypage-label">아이디</span>
+          <span id="mypage-username" class="mypage-value"></span>
+        </div>
+        <div class="mypage-row">
+          <span class="mypage-label">전화번호</span>
+          <span id="mypage-phone" class="mypage-value"></span>
+        </div>
+        <div class="mypage-row">
+          <span class="mypage-label">생년월일</span>
+          <span id="mypage-birth" class="mypage-value"></span>
+        </div>
+      </div>
+      <div class="mypage-danger">
+        <p class="danger-title">계정 탈퇴</p>
+        <p class="danger-desc">탈퇴 시 모든 일기, 사진, 가족앨범이 영구 삭제됩니다.</p>
+        <button id="withdraw-btn" class="withdraw-btn">회원 탈퇴</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 다이어리 메인 화면 (로그인 후 표시) -->
   <div id="app-section" style="display:none">
 
@@ -44,6 +71,7 @@
       <h1>나의 다이어리</h1>
       <div class="header-right">
         <span id="welcome-text"></span>
+        <button id="mypage-btn">마이페이지</button>
         <button id="logout-btn">로그아웃</button>
       </div>
     </div>

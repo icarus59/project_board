@@ -59,6 +59,19 @@ async function login(username, password) {
   });
 }
 
+async function fetchMyInfo() {
+  return await fetch(`${API_URL}/api/auth/me`, {
+    headers: authHeaders(),
+  });
+}
+
+async function withdrawAccount() {
+  return await fetch(`${API_URL}/api/auth/me`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+}
+
 async function register(username, password, phone, birthDate) {
   return await fetch(`${API_URL}/api/auth/register`, {
     method:  'POST',
@@ -358,6 +371,46 @@ document.getElementById('register-btn').addEventListener('click', async function
 document.getElementById('logout-btn').addEventListener('click', function () {
   clearAuth();
   showAuth();
+});
+
+// 마이페이지 열기
+document.getElementById('mypage-btn').addEventListener('click', async function () {
+  const res  = await fetchMyInfo();
+  const data = await res.json();
+
+  document.getElementById('mypage-username').textContent = data.username || '-';
+  document.getElementById('mypage-phone').textContent    = data.phone || '미입력';
+  document.getElementById('mypage-birth').textContent    = data.birth_date
+    ? data.birth_date.slice(0, 10)
+    : '미입력';
+
+  document.getElementById('mypage-modal').style.display = 'flex';
+});
+
+// 마이페이지 닫기
+document.getElementById('mypage-close-btn').addEventListener('click', function () {
+  document.getElementById('mypage-modal').style.display = 'none';
+});
+
+document.getElementById('mypage-modal').addEventListener('click', function (e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
+// 회원 탈퇴
+document.getElementById('withdraw-btn').addEventListener('click', async function () {
+  const confirmed = confirm('정말 탈퇴하시겠습니까?\n모든 일기, 사진, 가족앨범이 영구 삭제됩니다.');
+  if (!confirmed) return;
+
+  const res = await withdrawAccount();
+  if (res.ok) {
+    alert('탈퇴가 완료되었습니다.');
+    clearAuth();
+    document.getElementById('mypage-modal').style.display = 'none';
+    showAuth();
+  } else {
+    const data = await res.json();
+    alert(data.message || '탈퇴 처리 중 오류가 발생했습니다.');
+  }
 });
 
 // 회원가입 모달 열기 / 닫기
