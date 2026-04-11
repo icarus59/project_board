@@ -111,6 +111,13 @@ h2 {
 
 .auth-switch a:hover { text-decoration: underline; }
 
+.user-count-text {
+  text-align: center;
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* ── 회원가입 모달 ── */
 .modal-overlay {
   position: fixed;

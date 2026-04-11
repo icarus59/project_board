@@ -6,6 +6,21 @@
 const API_URL = 'https://port-0-project-board-mn7inx3x932cf37f.sel3.cloudtype.app';
 
 // ════════════════════════════════
+//  통계
+// ════════════════════════════════
+
+async function loadUserCount() {
+  try {
+    const res  = await fetch(`${API_URL}/api/stats`);
+    const data = await res.json();
+    const el   = document.getElementById('user-count-text');
+    if (el) el.textContent = `현재 가입자 수: ${data.userCount}명`;
+  } catch (e) {
+    // 조회 실패 시 무시
+  }
+}
+
+// ════════════════════════════════
 //  인증 상태 관리 (localStorage)
 // ════════════════════════════════
 
@@ -772,4 +787,5 @@ if (getToken()) {
   showApp();
 } else {
   showAuth();
+  loadUserCount();
 }
