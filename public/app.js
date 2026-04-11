@@ -11,7 +11,8 @@ const API_URL = 'https://port-0-project-board-mn7inx3x932cf37f.sel3.cloudtype.ap
 
 async function loadUserCount() {
   try {
-    const res  = await fetch(`${API_URL}/api/stats`);
+    const url  = window.location.hostname === 'localhost' ? '/api/stats' : `${API_URL}/api/stats`;
+    const res  = await fetch(url);
     const data = await res.json();
     const el   = document.getElementById('user-count-text');
     if (el) el.textContent = `현재 가입자 수: ${data.userCount}명`;
