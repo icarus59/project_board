@@ -721,50 +721,74 @@ document.getElementById('family-next-btn').addEventListener('click', function ()
   renderFamilyCarousel();
 });
 
-// 사진/동영상 선택 → 미리보기 표시
+// 큐에 파일 추가 후 미리보기 렌더링
+async function addToFamilyQueue(file) {
+  if (file.type.startsWith('video/')) {
+    if (file.size > 50 * 1024 * 1024) {
+      alert('동영상은 50MB 이하만 업로드 가능합니다.');
+      return;
+    }
+    familyFiles.push(file);
+  } else {
+    const compressed = await compressImage(file);
+    familyFiles.push(compressed);
+  }
+  renderFamilyQueue();
+  document.getElementById('family-upload-form').style.display = 'block';
+}
+
+function renderFamilyQueue() {
+  const queue = document.getElementById('family-queue');
+  queue.innerHTML = '';
+  familyFiles.forEach(function (file, idx) {
+    const item = document.createElement('div');
+    item.className = 'family-queue-item';
+
+    if (file.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(file);
+      video.className = 'family-queue-thumb';
+      item.appendChild(video);
+    } else {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.className = 'family-queue-thumb';
+      item.appendChild(img);
+    }
+
+    const del = document.createElement('button');
+    del.className   = 'family-queue-del';
+    del.textContent = '✕';
+    del.addEventListener('click', function () {
+      familyFiles.splice(idx, 1);
+      if (familyFiles.length === 0) {
+        document.getElementById('family-upload-form').style.display = 'none';
+      } else {
+        renderFamilyQueue();
+      }
+    });
+    item.appendChild(del);
+    queue.appendChild(item);
+  });
+}
+
+// 파일 선택 (여러 장 동시 선택 지원)
 document.getElementById('family-photo-input').addEventListener('change', async function () {
   const files = Array.from(this.files);
   if (files.length === 0) return;
-
-  familyFiles = [];
-
-  const previewImg   = document.getElementById('family-preview-img');
-  const previewVideo = document.getElementById('family-preview-video');
-
-  // 첫 번째 파일 미리보기
-  const firstFile = files[0];
-  const isVideo   = firstFile.type.startsWith('video/');
-
-  if (isVideo) {
-    if (firstFile.size > 50 * 1024 * 1024) {
-      alert('동영상은 50MB 이하만 업로드 가능합니다.');
-      this.value = '';
-      return;
-    }
-    familyFiles = files;
-    previewImg.style.display   = 'none';
-    previewVideo.style.display = 'block';
-    previewVideo.src = URL.createObjectURL(firstFile);
-  } else {
-    // 이미지 파일은 모두 압축
-    for (const file of files) {
-      const compressed = await compressImage(file);
-      familyFiles.push(compressed);
-    }
-    previewVideo.style.display = 'none';
-    previewImg.style.display   = 'block';
-    const reader = new FileReader();
-    reader.onload = function (e) { previewImg.src = e.target.result; };
-    reader.readAsDataURL(familyFiles[0]);
-  }
-
-  // 여러 장 선택 시 개수 표시
-  const countMsg = files.length > 1 ? ` (${files.length}개 선택됨)` : '';
-  document.getElementById('family-description').placeholder = `설명을 입력하세요 (선택)${countMsg}`;
-
-  document.getElementById('family-upload-form').style.display = 'block';
-  document.getElementById('family-description').value = '';
   this.value = '';
+  for (const file of files) {
+    await addToFamilyQueue(file);
+  }
+  document.getElementById('family-description').value = '';
+});
+
+// "+ 더 추가" 파일 선택
+document.getElementById('family-photo-input-more').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+  await addToFamilyQueue(file);
 });
 
 // 저장 버튼
@@ -776,7 +800,9 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
   saveBtn.disabled  = true;
 
   for (let i = 0; i < familyFiles.length; i++) {
-    saveBtn.textContent = familyFiles.length > 1 ? `업로드 중... (${i + 1}/${familyFiles.length})` : '저장 중...';
+    saveBtn.textContent = familyFiles.length > 1
+      ? `업로드 중... (${i + 1}/${familyFiles.length})`
+      : '저장 중...';
     const formData = new FormData();
     formData.append('image', familyFiles[i]);
     formData.append('description', description);
@@ -790,7 +816,6 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
   saveBtn.textContent = '저장하기';
   saveBtn.disabled    = false;
   document.getElementById('family-upload-form').style.display = 'none';
-  document.getElementById('family-description').placeholder   = '설명을 입력하세요 (선택)';
   familyFiles = [];
   await loadFamilyPhotos();
 });
@@ -798,7 +823,6 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
 // 취소 버튼
 document.getElementById('family-cancel-btn').addEventListener('click', function () {
   document.getElementById('family-upload-form').style.display = 'none';
-  document.getElementById('family-description').placeholder   = '설명을 입력하세요 (선택)';
   familyFiles = [];
 });
 

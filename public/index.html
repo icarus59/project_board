@@ -175,8 +175,12 @@
 
         <!-- 업로드 폼 (사진/동영상 선택 후 표시) -->
         <div id="family-upload-form" style="display:none">
-          <img id="family-preview-img" src="" alt="미리보기" style="display:none" />
-          <video id="family-preview-video" controls style="display:none"></video>
+          <!-- 선택된 파일 큐 -->
+          <div id="family-queue"></div>
+          <label class="family-add-more-label">
+            + 더 추가
+            <input type="file" id="family-photo-input-more" accept="image/*,video/*" style="display:none" />
+          </label>
           <input type="text" id="family-description" placeholder="설명을 입력하세요 (선택)" />
           <div class="family-form-btns">
             <button id="family-cancel-btn" class="cancel-btn">취소</button>
