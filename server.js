@@ -70,9 +70,25 @@ async function initDB() {
       birth_date DATE         NULL
     )
   `);
-  // 기존 테이블에 phone, birth_date 컬럼 없으면 추가
-  await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''`);
-  await pool.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE NULL`);
+  // 기존 테이블에 phone 컬럼 없으면 추가
+  const [phoneCol] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'phone'`,
+    [process.env.DB_NAME]
+  );
+  if (phoneCol.length === 0) {
+    await pool.execute(`ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT ''`);
+  }
+
+  // 기존 테이블에 birth_date 컬럼 없으면 추가
+  const [birthCol] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'birth_date'`,
+    [process.env.DB_NAME]
+  );
+  if (birthCol.length === 0) {
+    await pool.execute(`ALTER TABLE users ADD COLUMN birth_date DATE NULL`);
+  }
 
   // 5단계: diaries 테이블 생성
   await pool.execute(`
@@ -111,9 +127,14 @@ async function initDB() {
     )
   `);
   // 기존 테이블에 file_type 컬럼 없으면 추가
-  await pool.execute(`
-    ALTER TABLE family_photos ADD COLUMN IF NOT EXISTS file_type VARCHAR(10) NOT NULL DEFAULT 'image'
-  `);
+  const [fileTypeCol] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'family_photos' AND COLUMN_NAME = 'file_type'`,
+    [process.env.DB_NAME]
+  );
+  if (fileTypeCol.length === 0) {
+    await pool.execute(`ALTER TABLE family_photos ADD COLUMN file_type VARCHAR(10) NOT NULL DEFAULT 'image'`);
+  }
 
   console.log('DB 연결 성공!');
 }
