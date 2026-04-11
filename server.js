@@ -139,6 +139,16 @@ function authMiddleware(req, res, next) {
 }
 
 // ════════════════════════════════
+//  통계 API (인증 불필요)
+// ════════════════════════════════
+
+// 가입자 수 조회
+app.get('/api/stats', async function (req, res) {
+  const [[row]] = await pool.execute('SELECT COUNT(*) AS count FROM users');
+  res.json({ userCount: row.count });
+});
+
+// ════════════════════════════════
 //  인증 API
 // ════════════════════════════════
 
