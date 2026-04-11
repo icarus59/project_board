@@ -594,7 +594,7 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
 //  가족앨범
 // ════════════════════════════════
 
-let familyFile    = null;
+let familyFiles   = [];
 let familyPhotos  = [];
 let familyCurrent = 0;
 let familyModalId = null;
@@ -723,31 +723,44 @@ document.getElementById('family-next-btn').addEventListener('click', function ()
 
 // 사진/동영상 선택 → 미리보기 표시
 document.getElementById('family-photo-input').addEventListener('change', async function () {
-  const file = this.files[0];
-  if (!file) return;
+  const files = Array.from(this.files);
+  if (files.length === 0) return;
 
-  const isVideo = file.type.startsWith('video/');
+  familyFiles = [];
+
   const previewImg   = document.getElementById('family-preview-img');
   const previewVideo = document.getElementById('family-preview-video');
 
+  // 첫 번째 파일 미리보기
+  const firstFile = files[0];
+  const isVideo   = firstFile.type.startsWith('video/');
+
   if (isVideo) {
-    if (file.size > 50 * 1024 * 1024) {
+    if (firstFile.size > 50 * 1024 * 1024) {
       alert('동영상은 50MB 이하만 업로드 가능합니다.');
       this.value = '';
       return;
     }
-    familyFile = file;
+    familyFiles = files;
     previewImg.style.display   = 'none';
     previewVideo.style.display = 'block';
-    previewVideo.src = URL.createObjectURL(file);
+    previewVideo.src = URL.createObjectURL(firstFile);
   } else {
-    familyFile = await compressImage(file);
+    // 이미지 파일은 모두 압축
+    for (const file of files) {
+      const compressed = await compressImage(file);
+      familyFiles.push(compressed);
+    }
     previewVideo.style.display = 'none';
     previewImg.style.display   = 'block';
     const reader = new FileReader();
     reader.onload = function (e) { previewImg.src = e.target.result; };
-    reader.readAsDataURL(familyFile);
+    reader.readAsDataURL(familyFiles[0]);
   }
+
+  // 여러 장 선택 시 개수 표시
+  const countMsg = files.length > 1 ? ` (${files.length}개 선택됨)` : '';
+  document.getElementById('family-description').placeholder = `설명을 입력하세요 (선택)${countMsg}`;
 
   document.getElementById('family-upload-form').style.display = 'block';
   document.getElementById('family-description').value = '';
@@ -756,28 +769,37 @@ document.getElementById('family-photo-input').addEventListener('change', async f
 
 // 저장 버튼
 document.getElementById('family-save-btn').addEventListener('click', async function () {
-  if (!familyFile) return;
+  if (familyFiles.length === 0) return;
 
   const description = document.getElementById('family-description').value.trim();
-  const formData    = new FormData();
-  formData.append('image', familyFile);
-  formData.append('description', description);
+  const saveBtn     = document.getElementById('family-save-btn');
+  saveBtn.disabled  = true;
 
-  await fetch(`${API_URL}/api/family`, {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${getToken()}` },
-    body:    formData,
-  });
+  for (let i = 0; i < familyFiles.length; i++) {
+    saveBtn.textContent = familyFiles.length > 1 ? `업로드 중... (${i + 1}/${familyFiles.length})` : '저장 중...';
+    const formData = new FormData();
+    formData.append('image', familyFiles[i]);
+    formData.append('description', description);
+    await fetch(`${API_URL}/api/family`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+      body:    formData,
+    });
+  }
 
+  saveBtn.textContent = '저장하기';
+  saveBtn.disabled    = false;
   document.getElementById('family-upload-form').style.display = 'none';
-  familyFile = null;
+  document.getElementById('family-description').placeholder   = '설명을 입력하세요 (선택)';
+  familyFiles = [];
   await loadFamilyPhotos();
 });
 
 // 취소 버튼
 document.getElementById('family-cancel-btn').addEventListener('click', function () {
   document.getElementById('family-upload-form').style.display = 'none';
-  familyFile = null;
+  document.getElementById('family-description').placeholder   = '설명을 입력하세요 (선택)';
+  familyFiles = [];
 });
 
 // ════════════════════════════════
