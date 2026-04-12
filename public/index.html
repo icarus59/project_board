@@ -197,6 +197,54 @@
         <p id="family-empty-msg" class="family-empty" style="display:none">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
         <p id="family-counter" class="family-counter"></p>
       </section>
+      <!-- 가족 게시판 -->
+      <section class="board-section">
+        <h2 class="family-board-title">가족 게시판</h2>
+
+        <!-- 글쓰기 / 수정 패널 -->
+        <div class="board-write" id="family-write-panel">
+          <h2 id="family-write-panel-title">글쓰기</h2>
+          <input type="text" id="family-title-input" placeholder="제목을 입력하세요" />
+          <textarea id="family-content-input" placeholder="내용을 입력하세요"></textarea>
+          <div class="write-footer">
+            <button id="family-cancel-write-btn" class="cancel-btn">취소</button>
+            <button id="family-save-post-btn">저장하기</button>
+          </div>
+        </div>
+
+        <!-- 검색 바 -->
+        <div class="board-search">
+          <div class="search-group">
+            <select id="family-search-type">
+              <option value="title">제목</option>
+              <option value="content">내용</option>
+            </select>
+            <input type="text" id="family-search-input" placeholder="" />
+            <button id="family-search-btn">검색</button>
+          </div>
+        </div>
+
+        <!-- 게시판 테이블 -->
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="family-check-all" /></th>
+              <th class="col-title">제목</th>
+              <th class="col-author">작성자</th>
+              <th class="col-date">날짜</th>
+            </tr>
+          </thead>
+          <tbody id="family-post-list"></tbody>
+        </table>
+
+        <!-- 하단 버튼 -->
+        <div class="board-footer">
+          <button id="family-bulk-delete-btn" class="delete-btn">삭제</button>
+          <button id="family-write-toggle-btn">글쓰기</button>
+        </div>
+
+      </section>
+
     </div><!-- /tab-family -->
 
     <!-- 가족앨범 상세 모달 -->

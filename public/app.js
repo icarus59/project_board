@@ -586,7 +586,10 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
     document.getElementById('tab-diary').style.display  = tab === 'diary'  ? 'block' : 'none';
     document.getElementById('tab-family').style.display = tab === 'family' ? 'block' : 'none';
 
-    if (tab === 'family') loadFamilyPhotos();
+    if (tab === 'family') {
+      loadFamilyPhotos();
+      renderFamilyPosts();
+    }
   });
 });
 
@@ -824,6 +827,196 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
 document.getElementById('family-cancel-btn').addEventListener('click', function () {
   document.getElementById('family-upload-form').style.display = 'none';
   familyFiles = [];
+});
+
+// ════════════════════════════════
+//  가족 게시판
+// ════════════════════════════════
+
+let familyEditingId = null;
+const familyPostList = document.getElementById('family-post-list');
+
+async function fetchFamilyPosts() {
+  const res = await fetch(`${API_URL}/api/family-posts`, { headers: authHeaders() });
+  return await res.json();
+}
+
+async function renderFamilyPosts(searchTerm = '', searchType = 'title') {
+  const posts = await fetchFamilyPosts();
+  familyPostList.innerHTML = '';
+
+  const filtered = searchTerm
+    ? posts.filter(p =>
+        (searchType === 'title' ? p.title : p.content)
+          .toLowerCase().includes(searchTerm.toLowerCase()))
+    : posts;
+
+  if (filtered.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="4" class="board-empty">등록된 글이 없어요.</td>`;
+    familyPostList.appendChild(tr);
+    return;
+  }
+
+  filtered.forEach(function (post) {
+    const tr = document.createElement('tr');
+    tr.dataset.id      = post.id;
+    tr.dataset.title   = post.title;
+    tr.dataset.content = post.content;
+    tr.dataset.date    = post.date;
+    tr.innerHTML = `
+      <td class="col-check"><input type="checkbox" class="family-row-check" data-id="${post.id}" /></td>
+      <td class="col-title">
+        <span class="diary-title">${post.title}</span>
+        <span class="row-actions">
+          <button class="edit-btn family-edit-btn" data-id="${post.id}">수정</button>
+          <button class="delete-btn family-delete-btn" data-id="${post.id}">삭제</button>
+        </span>
+      </td>
+      <td class="col-author">${post.author}</td>
+      <td class="col-date">${post.date}</td>
+    `;
+    familyPostList.appendChild(tr);
+  });
+}
+
+function openFamilyWritePanel(post = null) {
+  const panel        = document.getElementById('family-write-panel');
+  const panelTitle   = document.getElementById('family-write-panel-title');
+  const titleInput   = document.getElementById('family-title-input');
+  const contentInput = document.getElementById('family-content-input');
+  const saveBtn      = document.getElementById('family-save-post-btn');
+
+  if (post) {
+    familyEditingId        = post.id;
+    panelTitle.textContent = '글 수정';
+    titleInput.value       = post.title;
+    contentInput.value     = post.content;
+    saveBtn.textContent    = '수정 완료';
+  } else {
+    familyEditingId        = null;
+    panelTitle.textContent = '글쓰기';
+    titleInput.value       = '';
+    contentInput.value     = '';
+    saveBtn.textContent    = '저장하기';
+  }
+
+  panel.classList.add('open');
+  document.getElementById('family-write-toggle-btn').textContent = '닫기';
+  titleInput.focus();
+}
+
+function closeFamilyWritePanel() {
+  document.getElementById('family-write-panel').classList.remove('open');
+  document.getElementById('family-write-toggle-btn').textContent = '글쓰기';
+  familyEditingId = null;
+}
+
+// 저장 / 수정 완료
+document.getElementById('family-save-post-btn').addEventListener('click', async function () {
+  const title   = document.getElementById('family-title-input').value.trim();
+  const content = document.getElementById('family-content-input').value.trim();
+
+  if (!title || !content) {
+    alert('제목과 내용을 모두 입력해주세요!');
+    return;
+  }
+
+  if (familyEditingId) {
+    await fetch(`${API_URL}/api/family-posts/${familyEditingId}`, {
+      method:  'PUT',
+      headers: authHeaders(),
+      body:    JSON.stringify({ title, content }),
+    });
+  } else {
+    await fetch(`${API_URL}/api/family-posts`, {
+      method:  'POST',
+      headers: authHeaders(),
+      body:    JSON.stringify({ title, content }),
+    });
+  }
+
+  closeFamilyWritePanel();
+  await renderFamilyPosts();
+});
+
+// 취소 버튼
+document.getElementById('family-cancel-write-btn').addEventListener('click', function () {
+  closeFamilyWritePanel();
+});
+
+// 글쓰기 토글
+document.getElementById('family-write-toggle-btn').addEventListener('click', function () {
+  const panel = document.getElementById('family-write-panel');
+  if (panel.classList.contains('open')) {
+    closeFamilyWritePanel();
+  } else {
+    openFamilyWritePanel();
+  }
+});
+
+// 수정 / 삭제 / 제목 클릭 (이벤트 위임)
+familyPostList.addEventListener('click', async function (event) {
+  const btn = event.target;
+  const id  = Number(btn.dataset.id);
+
+  if (btn.classList.contains('diary-title')) {
+    toggleDetail(btn.closest('tr'));
+    return;
+  }
+
+  if (btn.classList.contains('family-edit-btn')) {
+    const posts = await fetchFamilyPosts();
+    const post  = posts.find(p => p.id === id);
+    openFamilyWritePanel(post);
+  }
+
+  if (btn.classList.contains('family-delete-btn')) {
+    if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
+    await fetch(`${API_URL}/api/family-posts/${id}`, {
+      method:  'DELETE',
+      headers: authHeaders(),
+    });
+    await renderFamilyPosts();
+  }
+});
+
+// 전체 선택
+document.getElementById('family-check-all').addEventListener('change', function () {
+  document.querySelectorAll('.family-row-check').forEach(cb => cb.checked = this.checked);
+});
+
+// 선택 삭제
+document.getElementById('family-bulk-delete-btn').addEventListener('click', async function () {
+  const checked = document.querySelectorAll('.family-row-check:checked');
+  if (checked.length === 0) {
+    alert('삭제할 항목을 선택해주세요.');
+    return;
+  }
+  if (!confirm(`${checked.length}개의 게시글을 삭제하시겠습니까?`)) return;
+
+  const ids = Array.from(checked).map(cb => Number(cb.dataset.id));
+  await Promise.all(ids.map(id =>
+    fetch(`${API_URL}/api/family-posts/${id}`, {
+      method:  'DELETE',
+      headers: authHeaders(),
+    })
+  ));
+  await renderFamilyPosts();
+});
+
+// 검색
+document.getElementById('family-search-btn').addEventListener('click', async function () {
+  const searchTerm = document.getElementById('family-search-input').value.trim();
+  const searchType = document.getElementById('family-search-type').value;
+  await renderFamilyPosts(searchTerm, searchType);
+});
+
+document.getElementById('family-search-input').addEventListener('keydown', async function (e) {
+  if (e.key === 'Enter') {
+    const searchType = document.getElementById('family-search-type').value;
+    await renderFamilyPosts(this.value.trim(), searchType);
+  }
 });
 
 // ════════════════════════════════

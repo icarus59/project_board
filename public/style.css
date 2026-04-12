@@ -1289,6 +1289,17 @@ tr.row-active > td {
   }
 }
 
+/* ── 가족 게시판 구분 제목 ── */
+.family-board-title {
+  padding: 18px 28px 0;
+  font-family: 'Noto Serif KR', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  border-top: 2px solid var(--primary-light);
+  margin: 0;
+}
+
 /* ── 애니메이션 ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
