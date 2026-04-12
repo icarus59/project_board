@@ -113,7 +113,20 @@ async function initDB() {
     )
   `);
 
-  // 7단계: family_photos 테이블 생성
+  // 7단계: family_posts 테이블 생성
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS family_posts (
+      id      INT           AUTO_INCREMENT PRIMARY KEY,
+      user_id INT           NOT NULL,
+      title   VARCHAR(255)  NOT NULL,
+      content TEXT          NOT NULL,
+      author  VARCHAR(50)   NOT NULL,
+      date    VARCHAR(50)   NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // 8단계: family_photos 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS family_photos (
       id          INT          AUTO_INCREMENT PRIMARY KEY,
@@ -231,10 +244,11 @@ app.delete('/api/auth/me', authMiddleware, async function (req, res) {
   }
 
   // 3. DB 데이터 삭제 (순서 중요: 자식 테이블 먼저)
-  await pool.execute('DELETE FROM diaries      WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM images       WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM diaries       WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM images        WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM family_photos WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM users        WHERE id = ?',      [req.userId]);
+  await pool.execute('DELETE FROM family_posts  WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM users         WHERE id = ?',      [req.userId]);
 
   res.json({ message: '탈퇴가 완료되었습니다.' });
 });
@@ -460,6 +474,64 @@ app.delete('/api/family/:id', authMiddleware, async function (req, res) {
 
   await pool.execute(
     'DELETE FROM family_photos WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// ════════════════════════════════
+//  가족 게시판 API — 로그인 필요
+// ════════════════════════════════
+
+// R: 가족 게시판 목록 조회
+app.get('/api/family-posts', authMiddleware, async function (req, res) {
+  const [rows] = await pool.execute(
+    'SELECT * FROM family_posts WHERE user_id = ? ORDER BY id DESC',
+    [req.userId]
+  );
+  res.json(rows);
+});
+
+// C: 가족 게시판 글 작성
+app.post('/api/family-posts', authMiddleware, async function (req, res) {
+  const { title, content } = req.body;
+  const date = new Date().toLocaleDateString('ko-KR');
+
+  const [userRows] = await pool.execute('SELECT username FROM users WHERE id = ?', [req.userId]);
+  const author = userRows[0]?.username || '알 수 없음';
+
+  const [result] = await pool.execute(
+    'INSERT INTO family_posts (user_id, title, content, author, date) VALUES (?, ?, ?, ?, ?)',
+    [req.userId, title, content, author, date]
+  );
+
+  const [rows] = await pool.execute('SELECT * FROM family_posts WHERE id = ?', [result.insertId]);
+  res.status(201).json(rows[0]);
+});
+
+// U: 가족 게시판 글 수정
+app.put('/api/family-posts/:id', authMiddleware, async function (req, res) {
+  const id = Number(req.params.id);
+  const { title, content } = req.body;
+
+  const [result] = await pool.execute(
+    'UPDATE family_posts SET title = ?, content = ? WHERE id = ? AND user_id = ?',
+    [title, content, id, req.userId]
+  );
+
+  if (result.affectedRows === 0) {
+    return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
+  }
+
+  const [rows] = await pool.execute('SELECT * FROM family_posts WHERE id = ?', [id]);
+  res.json(rows[0]);
+});
+
+// D: 가족 게시판 글 삭제
+app.delete('/api/family-posts/:id', authMiddleware, async function (req, res) {
+  const id = Number(req.params.id);
+  await pool.execute(
+    'DELETE FROM family_posts WHERE id = ? AND user_id = ?',
     [id, req.userId]
   );
   res.json({ message: '삭제되었습니다.' });
