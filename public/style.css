@@ -996,6 +996,12 @@ tr.row-active > td {
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   z-index: 2;
   position: relative;
+  background: #1a1a1a;
+}
+
+.carousel-center img,
+.carousel-center video {
+  object-fit: contain;
 }
 
 .carousel-side {
