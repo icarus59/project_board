@@ -991,39 +991,43 @@ tr.row-active > td {
 }
 
 .carousel-center {
-  width: 60%;
-  max-width: 340px;
-  box-shadow: var(--shadow-md);
+  width: 90%;
+  max-width: 575px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   z-index: 2;
+  position: relative;
 }
 
 .carousel-side {
-  width: 18%;
-  max-width: 100px;
-  opacity: 0.55;
-  filter: grayscale(30%);
-  transform: scale(0.88);
+  width: 20%;
+  max-width: 120px;
+  opacity: 0.45;
+  filter: grayscale(20%) blur(1px);
+  transform: scale(0.78);
+  z-index: 1;
+  position: relative;
+  margin: 0 -40px;
 }
 
 .carousel-center:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.22);
 }
 
 .carousel-side:hover {
-  opacity: 0.75;
+  opacity: 0.65;
 }
 
 .carousel-item img,
 .carousel-item video {
   width: 100%;
-  height: 200px;
+  height: 345px;
   object-fit: cover;
   display: block;
 }
 
 .carousel-side img,
 .carousel-side video {
-  height: 140px;
+  height: 200px;
 }
 
 @media (max-width: 480px) {
