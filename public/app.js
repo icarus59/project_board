@@ -297,22 +297,31 @@ function compressImage(file) {
 
 // 사진 올리기
 document.getElementById('photo-input').addEventListener('change', async function () {
-  const file = this.files[0];
-  if (!file) return;
+  const files = Array.from(this.files);
+  if (files.length === 0) return;
 
-  const compressed = await compressImage(file);
+  const uploadLabel = document.getElementById('upload-label');
+  const originalText = uploadLabel.childNodes[0].nodeValue;
 
-  const formData = new FormData();
-  formData.append('image', compressed);
+  for (let i = 0; i < files.length; i++) {
+    if (files.length > 1) {
+      uploadLabel.childNodes[0].nodeValue = `업로드 중... (${i + 1}/${files.length})`;
+    }
 
-  await fetch(`${API_URL}/api/images`, {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${getToken()}` },
-    body:    formData,
-  });
+    const compressed = await compressImage(files[i]);
+    const formData = new FormData();
+    formData.append('image', compressed);
 
+    await fetch(`${API_URL}/api/images`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+      body:    formData,
+    });
+  }
+
+  uploadLabel.childNodes[0].nodeValue = originalText;
   await loadPhotos();
-  current = photos.length - 1;  // 방금 올린 사진으로 이동
+  current = photos.length - 1;  // 방금 올린 마지막 사진으로 이동
   renderSlide();
 
   this.value = '';  // 같은 파일 다시 올릴 수 있게 초기화
