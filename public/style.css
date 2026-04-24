@@ -1310,6 +1310,77 @@ tr.row-active > td {
   margin: 0;
 }
 
+/* ── 배경음악 플레이어 ── */
+.music-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 8px 14px;
+  z-index: 9000;
+  max-width: 280px;
+  animation: fadeUp 0.4s ease both;
+}
+
+.music-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 15px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition);
+}
+
+.music-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  box-shadow: none;
+}
+
+.music-play-btn {
+  background: var(--primary-light);
+  font-size: 13px;
+}
+
+.music-track-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .music-player {
+    bottom: 12px;
+    right: 12px;
+    max-width: 200px;
+    padding: 6px 10px;
+  }
+
+  .music-track-name {
+    max-width: 100px;
+    font-size: 10px;
+  }
+}
+
 /* ── 애니메이션 ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }

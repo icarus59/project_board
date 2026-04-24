@@ -1033,6 +1033,84 @@ document.getElementById('family-search-input').addEventListener('keydown', async
 });
 
 // ════════════════════════════════
+//  배경음악 플레이어 (셔플)
+// ════════════════════════════════
+
+const bgAudio    = new Audio();
+let musicTracks  = [];
+let musicOrder   = [];
+let musicIndex   = 0;
+let musicPlaying = false;
+
+function shuffleTracks(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function setMusicTrack(idx) {
+  const track = musicTracks[idx];
+  bgAudio.src = track.url;
+  document.getElementById('music-track-name').textContent = '♪ ' + track.name.replace(/\.mp3$/i, '');
+}
+
+function playMusicNext() {
+  musicIndex = (musicIndex + 1) % musicOrder.length;
+  if (musicIndex === 0) musicOrder = shuffleTracks(musicOrder);
+  setMusicTrack(musicOrder[musicIndex]);
+  bgAudio.play().catch(function () {});
+}
+
+bgAudio.addEventListener('ended', playMusicNext);
+
+async function initMusicPlayer() {
+  try {
+    const baseUrl = window.location.hostname === 'localhost' ? '' : API_URL;
+    const res     = await fetch(baseUrl + '/api/music');
+    musicTracks   = await res.json();
+    if (musicTracks.length === 0) return;
+
+    musicOrder = shuffleTracks(musicTracks.map(function (_, i) { return i; }));
+    musicIndex = 0;
+    setMusicTrack(musicOrder[musicIndex]);
+  } catch (e) {
+    // 음악 파일 없으면 조용히 무시
+  }
+}
+
+document.getElementById('music-play-btn').addEventListener('click', function () {
+  if (musicTracks.length === 0) return;
+  if (musicPlaying) {
+    bgAudio.pause();
+    musicPlaying = false;
+    this.textContent = '▶';
+  } else {
+    bgAudio.play().then(function () {
+      musicPlaying = true;
+      document.getElementById('music-play-btn').textContent = '⏸';
+    }).catch(function () {});
+  }
+});
+
+document.getElementById('music-prev-btn').addEventListener('click', function () {
+  if (musicTracks.length === 0) return;
+  musicIndex = (musicIndex - 1 + musicOrder.length) % musicOrder.length;
+  setMusicTrack(musicOrder[musicIndex]);
+  if (musicPlaying) bgAudio.play().catch(function () {});
+});
+
+document.getElementById('music-next-btn').addEventListener('click', function () {
+  if (musicTracks.length === 0) return;
+  playMusicNext();
+  if (musicPlaying) document.getElementById('music-play-btn').textContent = '⏸';
+});
+
+initMusicPlayer();
+
+// ════════════════════════════════
 //  초기 실행 — 토큰 있으면 바로 앱 화면으로
 // ════════════════════════════════
 
