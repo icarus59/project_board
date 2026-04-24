@@ -5,6 +5,8 @@ const cors    = require('cors');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
 const multer  = require('multer');
+const fs      = require('fs');
+const path    = require('path');
 const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
 
@@ -33,6 +35,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'my-diary-secret-key';
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
+app.use('/music', express.static(path.join(__dirname, 'music')));
 
 // ════════════════════════════════
 //  DB 연결 & 테이블 초기화
@@ -175,6 +178,17 @@ function authMiddleware(req, res, next) {
 // ════════════════════════════════
 //  통계 API (인증 불필요)
 // ════════════════════════════════
+
+// 음악 목록 조회
+app.get('/api/music', function (req, res) {
+  const musicDir = path.join(__dirname, 'music');
+  try {
+    const files = fs.readdirSync(musicDir).filter(f => f.toLowerCase().endsWith('.mp3'));
+    res.json(files.map(f => ({ name: f, url: '/music/' + encodeURIComponent(f) })));
+  } catch (e) {
+    res.json([]);
+  }
+});
 
 // 가입자 수 조회
 app.get('/api/stats', async function (req, res) {
