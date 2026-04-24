@@ -5,9 +5,7 @@ const cors    = require('cors');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
 const multer  = require('multer');
-const fs      = require('fs');
-const path    = require('path');
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
 
 const upload = multer({
@@ -35,7 +33,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'my-diary-secret-key';
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
-app.use('/music', express.static(path.join(__dirname, 'music')));
 
 // ════════════════════════════════
 //  DB 연결 & 테이블 초기화
@@ -179,12 +176,24 @@ function authMiddleware(req, res, next) {
 //  통계 API (인증 불필요)
 // ════════════════════════════════
 
-// 음악 목록 조회
-app.get('/api/music', function (req, res) {
-  const musicDir = path.join(__dirname, 'music');
+// 음악 목록 조회 (R2 버킷 music/ 폴더)
+app.get('/api/music', async function (req, res) {
   try {
-    const files = fs.readdirSync(musicDir).filter(f => f.toLowerCase().endsWith('.mp3'));
-    res.json(files.map(f => ({ name: f, url: '/music/' + encodeURIComponent(f) })));
+    const data = await s3.send(new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Prefix: 'music/',
+    }));
+    const tracks = (data.Contents || [])
+      .filter(obj => obj.Key.toLowerCase().endsWith('.mp3'))
+      .map(obj => {
+        const filename = obj.Key.replace('music/', '');
+        const encodedKey = 'music/' + encodeURIComponent(filename);
+        return {
+          name: filename,
+          url:  `${process.env.R2_PUBLIC_URL}/${encodedKey}`,
+        };
+      });
+    res.json(tracks);
   } catch (e) {
     res.json([]);
   }
