@@ -1033,14 +1033,16 @@ document.getElementById('family-search-input').addEventListener('keydown', async
 });
 
 // ════════════════════════════════
-//  배경음악 플레이어 (셔플)
+//  배경음악 플레이어 (셔플 + 첫 인터랙션 자동재생)
 // ════════════════════════════════
 
-const bgAudio    = new Audio();
-let musicTracks  = [];
-let musicOrder   = [];
-let musicIndex   = 0;
-let musicPlaying = false;
+const bgAudio         = new Audio();
+bgAudio.volume        = 0.45;
+let musicTracks       = [];
+let musicOrder        = [];
+let musicIndex        = 0;
+let musicPlaying      = false;
+let userInteracted    = false;
 
 function shuffleTracks(arr) {
   const a = arr.slice();
@@ -1055,6 +1057,14 @@ function setMusicTrack(idx) {
   const track = musicTracks[idx];
   bgAudio.src = track.url;
   document.getElementById('music-track-name').textContent = '♪ ' + track.name.replace(/\.mp3$/i, '');
+}
+
+function startPlayback() {
+  if (musicTracks.length === 0 || musicPlaying) return;
+  bgAudio.play().then(function () {
+    musicPlaying = true;
+    document.getElementById('music-play-btn').textContent = '⏸';
+  }).catch(function () {});
 }
 
 function playMusicNext() {
@@ -1076,13 +1086,28 @@ async function initMusicPlayer() {
     musicOrder = shuffleTracks(musicTracks.map(function (_, i) { return i; }));
     musicIndex = 0;
     setMusicTrack(musicOrder[musicIndex]);
+
+    // 이미 인터랙션이 있었으면 바로 재생
+    if (userInteracted) startPlayback();
   } catch (e) {
-    // 음악 파일 없으면 조용히 무시
+    // 음악 없으면 조용히 무시
   }
 }
 
+// 플레이어 영역 외 첫 클릭/키입력 시 자동재생
+function onFirstInteraction(e) {
+  if (e.target.closest && e.target.closest('#music-player')) return;
+  document.removeEventListener('click',   onFirstInteraction);
+  document.removeEventListener('keydown', onFirstInteraction);
+  userInteracted = true;
+  startPlayback();
+}
+document.addEventListener('click',   onFirstInteraction);
+document.addEventListener('keydown', onFirstInteraction);
+
 document.getElementById('music-play-btn').addEventListener('click', function () {
   if (musicTracks.length === 0) return;
+  userInteracted = true;
   if (musicPlaying) {
     bgAudio.pause();
     musicPlaying = false;
@@ -1105,7 +1130,8 @@ document.getElementById('music-prev-btn').addEventListener('click', function () 
 document.getElementById('music-next-btn').addEventListener('click', function () {
   if (musicTracks.length === 0) return;
   playMusicNext();
-  if (musicPlaying) document.getElementById('music-play-btn').textContent = '⏸';
+  document.getElementById('music-play-btn').textContent = '⏸';
+  musicPlaying = true;
 });
 
 initMusicPlayer();
