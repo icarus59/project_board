@@ -54,8 +54,8 @@ function showApp() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('app-section').style.display  = 'block';
   document.getElementById('welcome-text').textContent   = `${getUsername()}님, 안녕하세요!`;
-  loadPhotos();
-  renderDiaries();
+  loadFamilyPhotos();
+  renderFamilyPosts();
 }
 
 function showAuth() {
@@ -598,6 +598,10 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
     if (tab === 'family') {
       loadFamilyPhotos();
       renderFamilyPosts();
+    }
+    if (tab === 'diary') {
+      loadPhotos();
+      renderDiaries();
     }
   });
 });
