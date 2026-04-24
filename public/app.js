@@ -1037,7 +1037,7 @@ document.getElementById('family-search-input').addEventListener('keydown', async
 // ════════════════════════════════
 
 const bgAudio         = new Audio();
-bgAudio.volume        = 0.45;
+bgAudio.volume        = 0.2;
 let musicTracks       = [];
 let musicOrder        = [];
 let musicIndex        = 0;
