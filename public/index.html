@@ -104,6 +104,9 @@
       <!-- 사진 개수 표시 -->
       <p id="slide-counter"></p>
 
+      <!-- EXIF 메타정보 표시 -->
+      <div id="photo-exif-info" class="photo-exif-info"></div>
+
       <!-- 업로드 / 삭제 버튼 -->
       <div id="photo-btns">
         <label id="upload-label">
@@ -255,6 +258,7 @@
         <div id="family-modal-media"></div>
         <div class="family-modal-info">
           <p id="family-modal-date" class="family-card-date"></p>
+          <div id="family-modal-exif" class="family-modal-exif"></div>
           <input type="text" id="family-modal-desc-input" placeholder="설명을 입력하세요" />
           <div class="family-modal-btns">
             <button id="family-modal-delete-btn" class="delete-btn">삭제</button>
@@ -274,6 +278,7 @@
     <span id="music-track-name" class="music-track-name">♪ 배경음악</span>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

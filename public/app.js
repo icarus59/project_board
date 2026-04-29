@@ -225,21 +225,23 @@ async function fetchPhotos() {
 
 // 슬라이드 화면 업데이트
 function renderSlide() {
-  const img     = document.getElementById('slide-img');
-  const noMsg   = document.getElementById('no-photo-msg');
-  const counter = document.getElementById('slide-counter');
+  const img      = document.getElementById('slide-img');
+  const noMsg    = document.getElementById('no-photo-msg');
+  const counter  = document.getElementById('slide-counter');
+  const exifInfo = document.getElementById('photo-exif-info');
 
   if (photos.length === 0) {
-    // 사진이 없을 때
     img.style.display   = 'none';
     noMsg.style.display = 'block';
     counter.textContent = '';
+    if (exifInfo) exifInfo.innerHTML = '';
   } else {
-    // 사진이 있을 때
-    img.src             = photos[current].url;
+    const photo         = photos[current];
+    img.src             = photo.url;
     img.style.display   = 'block';
     noMsg.style.display = 'none';
     counter.textContent = `${current + 1} / ${photos.length}`;
+    if (exifInfo) exifInfo.innerHTML = buildExifHtml(photo);
   }
 }
 
@@ -263,6 +265,40 @@ document.getElementById('next-btn').addEventListener('click', function () {
   current = (current + 1) % photos.length;
   renderSlide();
 });
+
+// EXIF 메타정보 읽기 (압축 전 원본 파일에서 호출)
+async function readExifData(file) {
+  try {
+    if (typeof exifr === 'undefined') return {};
+    const data = await exifr.parse(file, { gps: true, exif: true });
+    if (!data) return {};
+    const result = {};
+    if (data.DateTimeOriginal instanceof Date) {
+      const d = data.DateTimeOriginal;
+      result.exif_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+      result.exif_lat = data.latitude.toFixed(5);
+      result.exif_lon = data.longitude.toFixed(5);
+    }
+    return result;
+  } catch (e) {
+    return {};
+  }
+}
+
+// EXIF 정보를 HTML 문자열로 변환
+function buildExifHtml(photo) {
+  const dateText = photo.exif_date
+    ? `📅 ${photo.exif_date}`
+    : '📅 촬영 날짜: 정보 없음';
+  let locationText = '📍 위치: 정보 없음';
+  if (photo.exif_lat && photo.exif_lon) {
+    const mapsUrl = `https://maps.google.com/?q=${photo.exif_lat},${photo.exif_lon}`;
+    locationText = `📍 <a href="${mapsUrl}" target="_blank" rel="noopener">${photo.exif_lat}, ${photo.exif_lon}</a>`;
+  }
+  return `<span>${dateText}</span><span>${locationText}</span>`;
+}
 
 // 이미지 압축 함수 (최대 1280px, 품질 80%)
 function compressImage(file) {
@@ -308,9 +344,13 @@ document.getElementById('photo-input').addEventListener('change', async function
       uploadLabel.childNodes[0].nodeValue = `업로드 중... (${i + 1}/${files.length})`;
     }
 
+    const exif       = await readExifData(files[i]);  // 압축 전 원본에서 EXIF 추출
     const compressed = await compressImage(files[i]);
-    const formData = new FormData();
+    const formData   = new FormData();
     formData.append('image', compressed);
+    if (exif.exif_date) formData.append('exif_date', exif.exif_date);
+    if (exif.exif_lat)  formData.append('exif_lat',  exif.exif_lat);
+    if (exif.exif_lon)  formData.append('exif_lon',  exif.exif_lon);
 
     await fetch(`${API_URL}/api/images`, {
       method:  'POST',
@@ -689,9 +729,13 @@ function openFamilyModal(photo) {
     ? `<video src="${photo.url}" controls></video>`
     : `<img src="${photo.url}" alt="가족사진" />`;
 
-  document.getElementById('family-modal-date').textContent     = photo.date;
-  document.getElementById('family-modal-desc-input').value     = photo.description || '';
-  document.getElementById('family-modal').style.display        = 'flex';
+  document.getElementById('family-modal-date').textContent = photo.date;
+
+  const exifEl = document.getElementById('family-modal-exif');
+  if (exifEl) exifEl.innerHTML = buildExifHtml(photo);
+
+  document.getElementById('family-modal-desc-input').value = photo.description || '';
+  document.getElementById('family-modal').style.display    = 'flex';
 }
 
 // 모달 닫기
@@ -744,10 +788,11 @@ async function addToFamilyQueue(file) {
       alert('동영상은 50MB 이하만 업로드 가능합니다.');
       return;
     }
-    familyFiles.push(file);
+    familyFiles.push({ file, exif: {} });
   } else {
+    const exif       = await readExifData(file);  // 압축 전 원본에서 EXIF 추출
     const compressed = await compressImage(file);
-    familyFiles.push(compressed);
+    familyFiles.push({ file: compressed, exif });
   }
   renderFamilyQueue();
   document.getElementById('family-upload-form').style.display = 'block';
@@ -756,7 +801,8 @@ async function addToFamilyQueue(file) {
 function renderFamilyQueue() {
   const queue = document.getElementById('family-queue');
   queue.innerHTML = '';
-  familyFiles.forEach(function (file, idx) {
+  familyFiles.forEach(function (entry, idx) {
+    const file = entry.file;
     const item = document.createElement('div');
     item.className = 'family-queue-item';
 
@@ -819,9 +865,13 @@ document.getElementById('family-save-btn').addEventListener('click', async funct
     saveBtn.textContent = familyFiles.length > 1
       ? `업로드 중... (${i + 1}/${familyFiles.length})`
       : '저장 중...';
+    const { file, exif } = familyFiles[i];
     const formData = new FormData();
-    formData.append('image', familyFiles[i]);
+    formData.append('image', file);
     formData.append('description', description);
+    if (exif.exif_date) formData.append('exif_date', exif.exif_date);
+    if (exif.exif_lat)  formData.append('exif_lat',  exif.exif_lat);
+    if (exif.exif_lon)  formData.append('exif_lon',  exif.exif_lon);
     await fetch(`${API_URL}/api/family`, {
       method:  'POST',
       headers: { 'Authorization': `Bearer ${getToken()}` },

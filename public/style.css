@@ -526,7 +526,45 @@ li small {
   color: var(--text-muted);
   font-size: 12px;
   letter-spacing: 1px;
-  margin: 6px 0 14px;
+  margin: 6px 0 6px;
+}
+
+.photo-exif-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  min-height: 18px;
+}
+
+.photo-exif-info a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.photo-exif-info a:hover {
+  text-decoration: underline;
+}
+
+.family-modal-exif {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.family-modal-exif a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.family-modal-exif a:hover {
+  text-decoration: underline;
 }
 
 #photo-btns {
