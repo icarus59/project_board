@@ -1348,6 +1348,352 @@ tr.row-active > td {
   margin: 0;
 }
 
+/* ── 캘린더 ── */
+
+#calendar-section {
+  padding: 22px 20px 18px;
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.cal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  min-width: 120px;
+  text-align: center;
+}
+
+.cal-nav-btn {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  color: var(--primary);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.cal-nav-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 요일 헤더 */
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 2px;
+}
+
+.cal-wday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 0;
+}
+
+.cal-wday-sun { color: #e57373; }
+.cal-wday-sat { color: #5c9cf5; }
+
+/* 캘린더 그리드 */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  gap: 1px;
+  background: var(--border);
+}
+
+.cal-cell {
+  background: var(--surface);
+  min-height: 80px;
+  padding: 6px 5px 4px;
+  cursor: pointer;
+  transition: background var(--transition);
+  overflow: hidden;
+  position: relative;
+}
+
+.cal-cell:hover {
+  background: #fdf8f5;
+}
+
+.cal-empty {
+  background: #fafaf8;
+  cursor: default;
+}
+
+.cal-selected {
+  background: #fff8f4;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.cal-today .cal-day-num {
+  background: var(--primary-dark);
+  color: white;
+  border-radius: 50%;
+}
+
+.cal-day-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.cal-num-sun { color: #e57373; }
+.cal-num-sat { color: #5c9cf5; }
+
+/* 이벤트 칩 (데스크탑) */
+.cal-event-chip {
+  font-size: 10px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+
+.cal-event-chip-more {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 0 2px;
+  margin-top: 1px;
+}
+
+/* 이벤트 점 (모바일) */
+.cal-dots {
+  display: none;
+  gap: 3px;
+  margin-top: 3px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.cal-dot-more {
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+/* 날짜 패널 */
+#cal-day-panel {
+  padding: 20px 22px;
+}
+
+.cal-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cal-day-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cal-no-event {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 30px 0;
+  margin: 0;
+}
+
+/* 일정 아이템 */
+.cal-event-item {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: #fdfaf8;
+  transition: box-shadow var(--transition);
+  animation: fadeUp 0.2s ease both;
+}
+
+.cal-event-item:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.cal-event-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cal-event-info { flex: 1; min-width: 0; }
+
+.cal-event-title-text {
+  display: block;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.cal-event-desc-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.cal-event-thumb {
+  max-width: 160px;
+  max-height: 100px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  margin-top: 8px;
+  display: block;
+  border: 1px solid var(--border);
+}
+
+.cal-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+  margin-top: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+}
+
+.cal-pdf-link:hover { text-decoration: underline; }
+
+/* 일정 모달 */
+.cal-event-modal-box {
+  max-width: 420px;
+}
+
+.cal-file-section {
+  margin-bottom: 12px;
+}
+
+.cal-file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background var(--transition);
+  width: 100%;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+.cal-file-label:hover {
+  background: var(--primary-light);
+}
+
+.cal-file-preview-img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+
+.cal-file-name-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 4px;
+}
+
+.cal-remove-file {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  box-shadow: none;
+}
+
+.cal-remove-file:hover {
+  background: var(--danger);
+  color: white;
+  box-shadow: none;
+}
+
+/* 모바일: 칩 숨기고 점 표시 */
+@media (max-width: 540px) {
+  .cal-cell {
+    min-height: 52px;
+    padding: 4px 3px;
+  }
+
+  .cal-day-num {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+
+  .cal-event-chip,
+  .cal-event-chip-more {
+    display: none;
+  }
+
+  .cal-dots {
+    display: flex;
+  }
+
+  .cal-nav-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+}
+
 /* ── 배경음악 플레이어 ── */
 .music-player {
   position: fixed;

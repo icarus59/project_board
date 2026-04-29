@@ -173,6 +173,22 @@ async function initDB() {
     }
   }
 
+  // 9단계: calendar_events 테이블 생성
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id          INT          AUTO_INCREMENT PRIMARY KEY,
+      user_id     INT          NOT NULL,
+      title       VARCHAR(255) NOT NULL,
+      description TEXT,
+      event_date  DATE         NOT NULL,
+      file_url    VARCHAR(500) DEFAULT NULL,
+      file_name   VARCHAR(255) DEFAULT NULL,
+      file_type   VARCHAR(20)  DEFAULT NULL,
+      key_name    VARCHAR(200) DEFAULT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   console.log('DB 연결 성공!');
 }
 
@@ -290,12 +306,22 @@ app.delete('/api/auth/me', authMiddleware, async function (req, res) {
     await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: fp.key_name }));
   }
 
-  // 3. DB 데이터 삭제 (순서 중요: 자식 테이블 먼저)
-  await pool.execute('DELETE FROM diaries       WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM images        WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM family_photos WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM family_posts  WHERE user_id = ?', [req.userId]);
-  await pool.execute('DELETE FROM users         WHERE id = ?',      [req.userId]);
+  // 3. 캘린더 첨부파일 R2 삭제
+  const [calFiles] = await pool.execute(
+    'SELECT key_name FROM calendar_events WHERE user_id = ? AND key_name IS NOT NULL',
+    [req.userId]
+  );
+  for (const cf of calFiles) {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: cf.key_name }));
+  }
+
+  // 4. DB 데이터 삭제 (순서 중요: 자식 테이블 먼저)
+  await pool.execute('DELETE FROM diaries         WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM images          WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM family_photos   WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM family_posts    WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM calendar_events WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM users           WHERE id = ?',      [req.userId]);
 
   res.json({ message: '탈퇴가 완료되었습니다.' });
 });
@@ -581,6 +607,131 @@ app.delete('/api/family-posts/:id', authMiddleware, async function (req, res) {
   const id = Number(req.params.id);
   await pool.execute(
     'DELETE FROM family_posts WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// ════════════════════════════════
+//  캘린더 API — 로그인 필요
+// ════════════════════════════════
+
+// R: 캘린더 일정 조회
+app.get('/api/calendar', authMiddleware, async function (req, res) {
+  const { year, month } = req.query;
+  let query  = 'SELECT * FROM calendar_events WHERE user_id = ?';
+  const params = [req.userId];
+  if (year && month) {
+    query += ' AND YEAR(event_date) = ? AND MONTH(event_date) = ?';
+    params.push(Number(year), Number(month));
+  }
+  query += ' ORDER BY event_date ASC, id ASC';
+  const [rows] = await pool.execute(query, params);
+  res.json(rows);
+});
+
+// C: 캘린더 일정 추가
+app.post('/api/calendar', authMiddleware, upload.single('file'), async function (req, res) {
+  const { title, description, event_date } = req.body;
+  if (!title || !event_date) {
+    return res.status(400).json({ message: '제목과 날짜를 입력해주세요.' });
+  }
+
+  let file_url = null, file_name = null, file_type = null, key_name = null;
+
+  if (req.file) {
+    key_name = `calendar/${req.userId}/${Date.now()}-${req.file.originalname}`;
+    const uploader = new Upload({
+      client: s3,
+      params: {
+        Bucket:      process.env.R2_BUCKET_NAME,
+        Key:         key_name,
+        Body:        req.file.buffer,
+        ContentType: req.file.mimetype,
+      },
+    });
+    await uploader.done();
+    file_url  = `${process.env.R2_PUBLIC_URL}/${key_name}`;
+    file_name = req.file.originalname;
+    file_type = req.file.mimetype.startsWith('image/') ? 'image' : 'pdf';
+  }
+
+  const [result] = await pool.execute(
+    'INSERT INTO calendar_events (user_id, title, description, event_date, file_url, file_name, file_type, key_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [req.userId, title, description || null, event_date, file_url, file_name, file_type, key_name]
+  );
+
+  const [rows] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [result.insertId]);
+  res.status(201).json(rows[0]);
+});
+
+// U: 캘린더 일정 수정
+app.put('/api/calendar/:id', authMiddleware, upload.single('file'), async function (req, res) {
+  const id = Number(req.params.id);
+  const { title, description, event_date, remove_file } = req.body;
+
+  const [existing] = await pool.execute(
+    'SELECT * FROM calendar_events WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  if (existing.length === 0) {
+    return res.status(404).json({ message: '일정을 찾을 수 없습니다.' });
+  }
+
+  let { file_url, file_name, file_type, key_name } = existing[0];
+
+  if (req.file) {
+    if (key_name) {
+      await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key_name }));
+    }
+    key_name  = `calendar/${req.userId}/${Date.now()}-${req.file.originalname}`;
+    const uploader = new Upload({
+      client: s3,
+      params: {
+        Bucket:      process.env.R2_BUCKET_NAME,
+        Key:         key_name,
+        Body:        req.file.buffer,
+        ContentType: req.file.mimetype,
+      },
+    });
+    await uploader.done();
+    file_url  = `${process.env.R2_PUBLIC_URL}/${key_name}`;
+    file_name = req.file.originalname;
+    file_type = req.file.mimetype.startsWith('image/') ? 'image' : 'pdf';
+  } else if (remove_file === '1') {
+    if (key_name) {
+      await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key_name }));
+    }
+    file_url = null; file_name = null; file_type = null; key_name = null;
+  }
+
+  await pool.execute(
+    'UPDATE calendar_events SET title = ?, description = ?, event_date = ?, file_url = ?, file_name = ?, file_type = ?, key_name = ? WHERE id = ? AND user_id = ?',
+    [title, description || null, event_date, file_url, file_name, file_type, key_name, id, req.userId]
+  );
+
+  const [rows] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [id]);
+  res.json(rows[0]);
+});
+
+// D: 캘린더 일정 삭제
+app.delete('/api/calendar/:id', authMiddleware, async function (req, res) {
+  const id = Number(req.params.id);
+
+  const [rows] = await pool.execute(
+    'SELECT key_name FROM calendar_events WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+
+  if (rows.length > 0 && rows[0].key_name) {
+    await s3.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key:    rows[0].key_name,
+    }));
+  }
+
+  await pool.execute(
+    'DELETE FROM calendar_events WHERE id = ? AND user_id = ?',
     [id, req.userId]
   );
   res.json({ message: '삭제되었습니다.' });

@@ -82,6 +82,7 @@
     <div class="tab-menu">
       <button class="tab-btn active" data-tab="family">가족앨범</button>
       <button class="tab-btn" data-tab="diary">다이어리</button>
+      <button class="tab-btn" data-tab="calendar">캘린더</button>
     </div>
 
     <!-- 다이어리 탭 -->
@@ -250,6 +251,62 @@
       </section>
 
     </div><!-- /tab-family -->
+
+    <!-- 캘린더 탭 -->
+    <div id="tab-calendar" style="display:none">
+
+      <!-- 월 캘린더 -->
+      <section id="calendar-section">
+        <div class="cal-header">
+          <button id="cal-prev-month" class="cal-nav-btn">&#8249;</button>
+          <h2 id="cal-month-title"></h2>
+          <button id="cal-next-month" class="cal-nav-btn">&#8250;</button>
+        </div>
+        <div class="cal-weekdays">
+          <span class="cal-wday cal-wday-sun">일</span>
+          <span class="cal-wday">월</span>
+          <span class="cal-wday">화</span>
+          <span class="cal-wday">수</span>
+          <span class="cal-wday">목</span>
+          <span class="cal-wday">금</span>
+          <span class="cal-wday cal-wday-sat">토</span>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </section>
+
+      <!-- 선택 날짜 일정 패널 -->
+      <section id="cal-day-panel" style="display:none">
+        <div class="cal-day-header">
+          <h2 id="cal-day-title"></h2>
+          <button id="cal-add-event-btn">+ 일정 추가</button>
+        </div>
+        <div id="cal-event-list"></div>
+      </section>
+
+    </div><!-- /tab-calendar -->
+
+    <!-- 캘린더 일정 모달 -->
+    <div id="cal-event-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box cal-event-modal-box">
+        <button id="cal-modal-close" class="modal-close">✕</button>
+        <h2 id="cal-modal-heading">일정 추가</h2>
+        <input type="text"  id="cal-event-title" placeholder="제목을 입력하세요" />
+        <input type="date"  id="cal-event-date" />
+        <textarea id="cal-event-desc" placeholder="메모 (선택)"></textarea>
+        <div class="cal-file-section">
+          <label class="cal-file-label">
+            파일 첨부 (이미지 / PDF)
+            <input type="file" id="cal-event-file" accept="image/*,.pdf" style="display:none" />
+          </label>
+          <div id="cal-file-preview"></div>
+        </div>
+        <div class="write-footer">
+          <button id="cal-modal-delete-btn" class="delete-btn" style="display:none">삭제</button>
+          <button id="cal-modal-cancel-btn" class="cancel-btn">취소</button>
+          <button id="cal-modal-save-btn">저장</button>
+        </div>
+      </div>
+    </div>
 
     <!-- 가족앨범 상세 모달 -->
     <div id="family-modal" class="modal-overlay" style="display:none">

@@ -632,8 +632,9 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
     this.classList.add('active');
 
     const tab = this.dataset.tab;
-    document.getElementById('tab-diary').style.display  = tab === 'diary'  ? 'block' : 'none';
-    document.getElementById('tab-family').style.display = tab === 'family' ? 'block' : 'none';
+    document.getElementById('tab-diary').style.display    = tab === 'diary'     ? 'block' : 'none';
+    document.getElementById('tab-family').style.display   = tab === 'family'    ? 'block' : 'none';
+    document.getElementById('tab-calendar').style.display = tab === 'calendar'  ? 'block' : 'none';
 
     if (tab === 'family') {
       loadFamilyPhotos();
@@ -642,6 +643,9 @@ document.querySelectorAll('.tab-btn').forEach(function (btn) {
     if (tab === 'diary') {
       loadPhotos();
       renderDiaries();
+    }
+    if (tab === 'calendar') {
+      loadCalendarEvents();
     }
   });
 });
@@ -1080,6 +1084,304 @@ document.getElementById('family-search-input').addEventListener('keydown', async
     const searchType = document.getElementById('family-search-type').value;
     await renderFamilyPosts(this.value.trim(), searchType);
   }
+});
+
+// ════════════════════════════════
+//  캘린더
+// ════════════════════════════════
+
+let calYear          = new Date().getFullYear();
+let calMonth         = new Date().getMonth() + 1;
+let calEvents        = [];
+let calSelectedDate  = null;
+let calEditingId     = null;
+let calSelectedFile  = null;
+let calFileRemoved   = false;
+let calOriginalFileUrl = null;
+
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+async function loadCalendarEvents() {
+  const res  = await fetch(`${API_URL}/api/calendar?year=${calYear}&month=${calMonth}`, {
+    headers: authHeaders(),
+  });
+  calEvents = await res.json();
+  renderCalendar();
+  if (calSelectedDate) showDayPanel(calSelectedDate);
+}
+
+function renderCalendar() {
+  document.getElementById('cal-month-title').textContent = `${calYear}년 ${calMonth}월`;
+
+  const grid        = document.getElementById('cal-grid');
+  grid.innerHTML    = '';
+
+  const firstDay    = new Date(calYear, calMonth - 1, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const today       = new Date();
+  const todayStr    = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const eventMap = {};
+  calEvents.forEach(function (ev) {
+    const d = ev.event_date.slice(0, 10);
+    if (!eventMap[d]) eventMap[d] = [];
+    eventMap[d].push(ev);
+  });
+
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell cal-empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dow     = (firstDay + d - 1) % 7;
+    const cell    = document.createElement('div');
+    cell.className = 'cal-cell';
+    if (dateStr === todayStr)       cell.classList.add('cal-today');
+    if (dateStr === calSelectedDate) cell.classList.add('cal-selected');
+
+    const numSpan = document.createElement('span');
+    numSpan.className   = 'cal-day-num';
+    numSpan.textContent = d;
+    if (dow === 0) numSpan.classList.add('cal-num-sun');
+    if (dow === 6) numSpan.classList.add('cal-num-sat');
+    cell.appendChild(numSpan);
+
+    const evList = eventMap[dateStr];
+    if (evList && evList.length > 0) {
+      const dotsWrap = document.createElement('div');
+      dotsWrap.className = 'cal-dots';
+      const shown = Math.min(evList.length, 3);
+      for (let i = 0; i < shown; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'cal-dot';
+        dotsWrap.appendChild(dot);
+      }
+      if (evList.length > 3) {
+        const more = document.createElement('span');
+        more.className   = 'cal-dot-more';
+        more.textContent = `+${evList.length - 3}`;
+        dotsWrap.appendChild(more);
+      }
+      cell.appendChild(dotsWrap);
+
+      // 첫 이벤트 제목 미리보기 (데스크탑)
+      const label = document.createElement('div');
+      label.className   = 'cal-event-chip';
+      label.textContent = evList[0].title;
+      cell.appendChild(label);
+      if (evList.length > 1) {
+        const more = document.createElement('div');
+        more.className   = 'cal-event-chip-more';
+        more.textContent = `+${evList.length - 1}`;
+        cell.appendChild(more);
+      }
+    }
+
+    cell.dataset.date = dateStr;
+    cell.addEventListener('click', function () {
+      calSelectedDate = this.dataset.date;
+      renderCalendar();
+      showDayPanel(calSelectedDate);
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+function showDayPanel(dateStr) {
+  const panel = document.getElementById('cal-day-panel');
+  const title = document.getElementById('cal-day-title');
+  const list  = document.getElementById('cal-event-list');
+
+  const date = new Date(dateStr + 'T00:00:00');
+  title.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${DAY_NAMES[date.getDay()]})`;
+  panel.style.display = 'block';
+
+  const dayEvents = calEvents.filter(ev => ev.event_date.slice(0, 10) === dateStr);
+  list.innerHTML = '';
+
+  if (dayEvents.length === 0) {
+    list.innerHTML = '<p class="cal-no-event">일정이 없어요. 추가해보세요!</p>';
+    return;
+  }
+
+  dayEvents.forEach(function (ev) {
+    const item = document.createElement('div');
+    item.className = 'cal-event-item';
+
+    let fileHtml = '';
+    if (ev.file_url) {
+      if (ev.file_type === 'image') {
+        fileHtml = `<a href="${ev.file_url}" target="_blank" rel="noopener"><img src="${ev.file_url}" class="cal-event-thumb" /></a>`;
+      } else {
+        fileHtml = `<a href="${ev.file_url}" target="_blank" rel="noopener" class="cal-pdf-link">📄 ${ev.file_name}</a>`;
+      }
+    }
+
+    item.innerHTML = `
+      <div class="cal-event-main">
+        <div class="cal-event-info">
+          <strong class="cal-event-title-text">${ev.title}</strong>
+          ${ev.description ? `<p class="cal-event-desc-text">${ev.description}</p>` : ''}
+          ${fileHtml}
+        </div>
+        <button class="cal-event-edit-btn edit-btn" data-id="${ev.id}">수정</button>
+      </div>
+    `;
+
+    item.querySelector('.cal-event-edit-btn').addEventListener('click', function () {
+      openCalEventModal(ev);
+    });
+
+    list.appendChild(item);
+  });
+}
+
+function openCalEventModal(ev = null) {
+  calEditingId       = ev ? ev.id : null;
+  calSelectedFile    = null;
+  calFileRemoved     = false;
+  calOriginalFileUrl = ev ? ev.file_url : null;
+
+  const titleInput = document.getElementById('cal-event-title');
+  const dateInput  = document.getElementById('cal-event-date');
+  const descInput  = document.getElementById('cal-event-desc');
+  const fileInput  = document.getElementById('cal-event-file');
+  const deleteBtn  = document.getElementById('cal-modal-delete-btn');
+  const preview    = document.getElementById('cal-file-preview');
+  const heading    = document.getElementById('cal-modal-heading');
+
+  fileInput.value   = '';
+  preview.innerHTML = '';
+
+  if (ev) {
+    heading.textContent    = '일정 수정';
+    titleInput.value       = ev.title;
+    dateInput.value        = ev.event_date.slice(0, 10);
+    descInput.value        = ev.description || '';
+    deleteBtn.style.display = 'inline-block';
+
+    if (ev.file_url) {
+      if (ev.file_type === 'image') {
+        preview.innerHTML = `<img src="${ev.file_url}" class="cal-file-preview-img" /><button type="button" class="cal-remove-file">✕ 파일 제거</button>`;
+      } else {
+        preview.innerHTML = `<a href="${ev.file_url}" target="_blank" class="cal-pdf-link">📄 ${ev.file_name}</a><button type="button" class="cal-remove-file">✕ 파일 제거</button>`;
+      }
+      preview.querySelector('.cal-remove-file').addEventListener('click', function () {
+        calFileRemoved     = true;
+        calSelectedFile    = null;
+        calOriginalFileUrl = null;
+        preview.innerHTML  = '';
+      });
+    }
+  } else {
+    heading.textContent     = '일정 추가';
+    titleInput.value        = '';
+    dateInput.value         = calSelectedDate || '';
+    descInput.value         = '';
+    deleteBtn.style.display = 'none';
+  }
+
+  document.getElementById('cal-event-modal').style.display = 'flex';
+  titleInput.focus();
+}
+
+// 파일 선택 미리보기
+document.getElementById('cal-event-file').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  calSelectedFile  = file;
+  calFileRemoved   = false;
+
+  const preview = document.getElementById('cal-file-preview');
+  if (file.type.startsWith('image/')) {
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${url}" class="cal-file-preview-img" /><span class="cal-file-name-text">${file.name}</span>`;
+  } else {
+    preview.innerHTML = `<span class="cal-pdf-link">📄 ${file.name}</span>`;
+  }
+});
+
+// 일정 저장
+document.getElementById('cal-modal-save-btn').addEventListener('click', async function () {
+  const title   = document.getElementById('cal-event-title').value.trim();
+  const dateVal = document.getElementById('cal-event-date').value;
+  const desc    = document.getElementById('cal-event-desc').value.trim();
+
+  if (!title || !dateVal) {
+    alert('제목과 날짜를 입력해주세요.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('title',      title);
+  formData.append('event_date', dateVal);
+  if (desc) formData.append('description', desc);
+
+  if (calSelectedFile) {
+    formData.append('file', calSelectedFile);
+  } else if (calEditingId && calFileRemoved) {
+    formData.append('remove_file', '1');
+  }
+
+  const url    = calEditingId ? `${API_URL}/api/calendar/${calEditingId}` : `${API_URL}/api/calendar`;
+  const method = calEditingId ? 'PUT' : 'POST';
+
+  await fetch(url, {
+    method,
+    headers: { 'Authorization': `Bearer ${getToken()}` },
+    body:    formData,
+  });
+
+  document.getElementById('cal-event-modal').style.display = 'none';
+  await loadCalendarEvents();
+});
+
+// 일정 삭제
+document.getElementById('cal-modal-delete-btn').addEventListener('click', async function () {
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+  await fetch(`${API_URL}/api/calendar/${calEditingId}`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+  document.getElementById('cal-event-modal').style.display = 'none';
+  await loadCalendarEvents();
+});
+
+// 모달 닫기
+document.getElementById('cal-modal-close').addEventListener('click', function () {
+  document.getElementById('cal-event-modal').style.display = 'none';
+});
+document.getElementById('cal-event-modal').addEventListener('click', function (e) {
+  if (e.target === this) this.style.display = 'none';
+});
+document.getElementById('cal-modal-cancel-btn').addEventListener('click', function () {
+  document.getElementById('cal-event-modal').style.display = 'none';
+});
+
+// 날짜 패널의 "일정 추가" 버튼
+document.getElementById('cal-add-event-btn').addEventListener('click', function () {
+  openCalEventModal(null);
+});
+
+// 이전/다음 달 버튼
+document.getElementById('cal-prev-month').addEventListener('click', function () {
+  calMonth--;
+  if (calMonth < 1) { calMonth = 12; calYear--; }
+  calSelectedDate = null;
+  document.getElementById('cal-day-panel').style.display = 'none';
+  loadCalendarEvents();
+});
+
+document.getElementById('cal-next-month').addEventListener('click', function () {
+  calMonth++;
+  if (calMonth > 12) { calMonth = 1; calYear++; }
+  calSelectedDate = null;
+  document.getElementById('cal-day-panel').style.display = 'none';
+  loadCalendarEvents();
 });
 
 // ════════════════════════════════
