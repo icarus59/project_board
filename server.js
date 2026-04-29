@@ -149,6 +149,30 @@ async function initDB() {
     await pool.execute(`ALTER TABLE family_photos ADD COLUMN file_type VARCHAR(10) NOT NULL DEFAULT 'image'`);
   }
 
+  // EXIF 컬럼 추가 (images 테이블)
+  for (const colName of ['exif_date', 'exif_lat', 'exif_lon']) {
+    const [exifCol] = await pool.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'images' AND COLUMN_NAME = ?`,
+      [process.env.DB_NAME, colName]
+    );
+    if (exifCol.length === 0) {
+      await pool.execute(`ALTER TABLE images ADD COLUMN ${colName} VARCHAR(30) DEFAULT NULL`);
+    }
+  }
+
+  // EXIF 컬럼 추가 (family_photos 테이블)
+  for (const colName of ['exif_date', 'exif_lat', 'exif_lon']) {
+    const [exifCol] = await pool.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'family_photos' AND COLUMN_NAME = ?`,
+      [process.env.DB_NAME, colName]
+    );
+    if (exifCol.length === 0) {
+      await pool.execute(`ALTER TABLE family_photos ADD COLUMN ${colName} VARCHAR(30) DEFAULT NULL`);
+    }
+  }
+
   console.log('DB 연결 성공!');
 }
 
@@ -363,7 +387,7 @@ app.delete('/api/diaries/:id', authMiddleware, async function (req, res) {
 // 내 사진 목록 조회
 app.get('/api/images', authMiddleware, async function (req, res) {
   const [rows] = await pool.execute(
-    'SELECT id, url FROM images WHERE user_id = ? ORDER BY id ASC',
+    'SELECT id, url, exif_date, exif_lat, exif_lon FROM images WHERE user_id = ? ORDER BY id ASC',
     [req.userId]
   );
   res.json(rows);
@@ -375,6 +399,7 @@ app.post('/api/images', authMiddleware, upload.single('image'), async function (
     return res.status(400).json({ message: '사진 데이터가 없습니다.' });
   }
 
+  const { exif_date, exif_lat, exif_lon } = req.body;
   const keyName = `${req.userId}/${Date.now()}-${req.file.originalname}`;
 
   const uploader = new Upload({
@@ -392,11 +417,11 @@ app.post('/api/images', authMiddleware, upload.single('image'), async function (
   const url = `${process.env.R2_PUBLIC_URL}/${keyName}`;
 
   const [result] = await pool.execute(
-    'INSERT INTO images (user_id, url, key_name) VALUES (?, ?, ?)',
-    [req.userId, url, keyName]
+    'INSERT INTO images (user_id, url, key_name, exif_date, exif_lat, exif_lon) VALUES (?, ?, ?, ?, ?, ?)',
+    [req.userId, url, keyName, exif_date || null, exif_lat || null, exif_lon || null]
   );
 
-  res.status(201).json({ id: result.insertId, url });
+  res.status(201).json({ id: result.insertId, url, exif_date: exif_date || null, exif_lat: exif_lat || null, exif_lon: exif_lon || null });
 });
 
 // 사진 삭제
@@ -429,7 +454,7 @@ app.delete('/api/images/:id', authMiddleware, async function (req, res) {
 // 가족앨범 목록 조회
 app.get('/api/family', authMiddleware, async function (req, res) {
   const [rows] = await pool.execute(
-    'SELECT id, url, description, date, file_type FROM family_photos WHERE user_id = ? ORDER BY id DESC',
+    'SELECT id, url, description, date, file_type, exif_date, exif_lat, exif_lon FROM family_photos WHERE user_id = ? ORDER BY id DESC',
     [req.userId]
   );
   res.json(rows);
@@ -441,7 +466,8 @@ app.post('/api/family', authMiddleware, upload.single('image'), async function (
     return res.status(400).json({ message: '사진 데이터가 없습니다.' });
   }
 
-  const description = req.body.description || '';
+  const { description: desc, exif_date, exif_lat, exif_lon } = req.body;
+  const description = desc || '';
   const date        = new Date().toLocaleDateString('ko-KR');
   const fileType    = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
   const keyName     = `family/${req.userId}/${Date.now()}-${req.file.originalname}`;
@@ -461,11 +487,11 @@ app.post('/api/family', authMiddleware, upload.single('image'), async function (
   const url = `${process.env.R2_PUBLIC_URL}/${keyName}`;
 
   const [result] = await pool.execute(
-    'INSERT INTO family_photos (user_id, url, key_name, description, date, file_type) VALUES (?, ?, ?, ?, ?, ?)',
-    [req.userId, url, keyName, description, date, fileType]
+    'INSERT INTO family_photos (user_id, url, key_name, description, date, file_type, exif_date, exif_lat, exif_lon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [req.userId, url, keyName, description, date, fileType, exif_date || null, exif_lat || null, exif_lon || null]
   );
 
-  res.status(201).json({ id: result.insertId, url, description, date, file_type: fileType });
+  res.status(201).json({ id: result.insertId, url, description, date, file_type: fileType, exif_date: exif_date || null, exif_lat: exif_lat || null, exif_lon: exif_lon || null });
 });
 
 // 가족앨범 설명 수정
