@@ -53,7 +53,7 @@ function authHeaders() {
 function showApp() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('app-section').style.display  = 'block';
-  document.getElementById('welcome-text').textContent   = `${getUsername()}님, 안녕하세요!`;
+  document.getElementById('welcome-text').textContent   = getUsername();
   loadFamilyPhotos();
   renderFamilyPosts();
 }
