@@ -90,30 +90,33 @@
 
     <!-- 사진 슬라이드 영역 -->
     <section id="photo-section">
-      <h2>사진</h2>
+      <!-- 헤더: 제목 + 업로드 버튼 -->
+      <div class="family-header">
+        <h2>사진 앨범</h2>
+        <label id="upload-label">
+          + 사진 추가
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none" />
+        </label>
+      </div>
 
       <!-- 슬라이드 창 -->
       <div id="slideshow">
         <button id="prev-btn">&#8249;</button>
         <div id="slide-display">
-          <p id="no-photo-msg">아직 사진이 없어요. 업로드해보세요!</p>
+          <p id="no-photo-msg">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
           <img id="slide-img" src="" alt="사진" loading="lazy" style="display:none" />
         </div>
         <button id="next-btn">&#8250;</button>
       </div>
 
       <!-- 사진 개수 표시 -->
-      <p id="slide-counter"></p>
+      <p id="slide-counter" class="family-counter"></p>
 
       <!-- EXIF 메타정보 표시 -->
       <div id="photo-exif-info" class="photo-exif-info"></div>
 
-      <!-- 업로드 / 삭제 버튼 -->
+      <!-- 삭제 버튼 -->
       <div id="photo-btns">
-        <label id="upload-label">
-          사진 올리기
-          <input type="file" id="photo-input" accept="image/*" multiple style="display:none" />
-        </label>
         <button id="delete-photo-btn">현재 사진 삭제</button>
       </div>
     </section>

@@ -29,7 +29,7 @@ body {
   background: #ddd8d0;
   min-height: 100vh;
   margin: 0;
-  padding: 32px 16px 60px;
+  padding: 24px 20px 40px;
   color: var(--text);
 }
 
@@ -174,7 +174,7 @@ h2 {
 
 /* ── 앱 전체 컨테이너 (단일 카드) ── */
 #app-section {
-  max-width: 440px;
+  max-width: 700px;
   margin: 0 auto;
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -188,7 +188,7 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 22px 24px 18px;
+  padding: 16px 28px 14px;
   background: transparent;
   border-bottom: 1px solid var(--border);
   box-shadow: none;
@@ -309,7 +309,7 @@ h2 {
 section {
   background: transparent;
   border-radius: 0;
-  padding: 22px 24px;
+  padding: 16px 28px;
   margin-bottom: 0;
   box-shadow: none;
   border: none;
@@ -438,26 +438,24 @@ li p { margin: 0 0 8px; color: var(--accent); font-size: 14px; line-height: 1.6;
 li small { color: var(--text-muted); font-size: 11px; }
 
 /* ── 사진 슬라이드 ── */
-#photo-section h2 { margin-bottom: 16px; }
-
 #slideshow {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin: 12px 0 0;
 }
 
 #slide-display {
   width: 100%;
-  height: 280px;
-  background: var(--bg);
+  height: 300px;
+  background: #1a1a1a;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1.5px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
 }
 
 #slide-display img {
@@ -468,7 +466,7 @@ li small { color: var(--text-muted); font-size: 11px; }
 }
 
 #no-photo-msg {
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.45);
   font-size: 14px;
   margin: 0;
 }
@@ -499,13 +497,8 @@ li small { color: var(--text-muted); font-size: 11px; }
   opacity: 1;
 }
 
-#slide-counter {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 12px;
-  letter-spacing: 1px;
-  margin: 6px 0;
-}
+/* #slide-counter는 .family-counter 클래스 스타일을 사용 */
+#slide-counter:empty { display: none; }
 
 .photo-exif-info {
   display: flex;
@@ -533,29 +526,40 @@ li small { color: var(--text-muted); font-size: 11px; }
 .family-modal-exif a { color: var(--accent); text-decoration: none; }
 .family-modal-exif a:hover { text-decoration: underline; }
 
-#photo-btns { display: flex; gap: 10px; }
-
+/* 업로드 라벨: 가족앨범 헤더 버튼과 동일한 아웃라인 스타일 */
 #upload-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: var(--primary);
-  color: white;
-  border-radius: var(--radius-md);
-  padding: 9px 18px;
-  font-size: 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-size: 13px;
   font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity var(--transition);
+  transition: background var(--transition), border-color var(--transition);
 }
 
-#upload-label:hover { opacity: 0.82; }
+#upload-label:hover {
+  background: var(--bg);
+  border-color: #b0aca8;
+}
+
+#photo-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
 
 #delete-photo-btn {
   background: transparent;
-  color: var(--danger);
-  border: 1.5px solid var(--danger);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  font-size: 13px;
+  padding: 6px 14px;
 }
 
 #delete-photo-btn:hover {
@@ -578,7 +582,7 @@ li small { color: var(--text-muted); font-size: 11px; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px 14px;
+  padding: 13px 28px 11px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   gap: 12px;
@@ -593,7 +597,7 @@ li small { color: var(--text-muted); font-size: 11px; }
 /* 글쓰기 / 수정 패널 */
 .board-write {
   display: none;
-  padding: 20px 24px 18px;
+  padding: 16px 28px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   animation: fadeUp 0.25s ease both;
@@ -640,7 +644,7 @@ li small { color: var(--text-muted); font-size: 11px; }
   padding: 6px 12px;
   margin-bottom: 0;
   font-size: 13px;
-  width: 130px;
+  width: 180px;
   background: var(--surface);
   outline: none;
   box-shadow: none;
@@ -678,7 +682,7 @@ li small { color: var(--text-muted); font-size: 11px; }
 }
 
 .board-table td {
-  padding: 13px 14px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -694,7 +698,7 @@ li small { color: var(--text-muted); font-size: 11px; }
 .col-check  { width: 40px; text-align: center; }
 .col-title  { text-align: left; }
 .col-author { width: 90px; text-align: center; color: var(--text-muted); font-size: 13px; }
-.col-date   { width: 80px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.col-date   { width: 100px; text-align: center; color: var(--text-muted); font-size: 13px; white-space: nowrap; }
 
 .diary-title {
   color: var(--text);
@@ -763,7 +767,7 @@ tr.row-active > td {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 11px 28px;
   border-top: 1px solid var(--border);
   background: var(--bg);
 }
@@ -795,24 +799,24 @@ tr.row-active > td {
 .edit-textarea { height: 80px; }
 
 /* ── 모바일 반응형 ── */
-@media (max-width: 480px) {
+@media (max-width: 540px) {
   body { padding: 12px 8px 40px; }
 
   #app-section { border-radius: var(--radius-md); }
 
-  .app-header { padding: 16px 18px 14px; }
+  .app-header { padding: 14px 16px 12px; }
 
   .app-header h1 { font-size: 1.2rem; }
 
   .header-right span { display: none; }
 
-  section { padding: 16px 18px; }
+  section { padding: 14px 16px; }
 
   #slide-display { height: 200px; }
 
   #prev-btn, #next-btn { width: 30px; height: 30px; font-size: 17px; }
 
-  .board-title-bar { padding: 13px 16px 11px; }
+  .board-title-bar { padding: 11px 16px 9px; }
 
   .search-group input[type="text"] { width: 90px; }
 
@@ -821,19 +825,19 @@ tr.row-active > td {
   .col-date { width: 60px; font-size: 11px; }
 
   .board-table th,
-  .board-table td { padding: 10px 8px; }
+  .board-table td { padding: 9px 8px; }
 
-  .board-write { padding: 16px 18px 14px; }
+  .board-write { padding: 14px 16px 12px; }
 
   .write-footer { flex-direction: row; justify-content: flex-end; }
 
   .board-footer { padding: 10px 12px; }
 
-  .detail-content { padding: 14px 16px 16px 16px; }
+  .detail-content { padding: 12px 14px 14px 14px; }
 
-  #photo-btns { flex-direction: column; }
+  #photo-btns { justify-content: flex-end; }
 
-  #upload-label, #delete-photo-btn { text-align: center; }
+  #delete-photo-btn { font-size: 12px; padding: 5px 12px; }
 }
 
 /* ── 탭 메뉴 ── */
@@ -843,7 +847,7 @@ tr.row-active > td {
   margin-bottom: 0;
   background: transparent;
   border-radius: 0;
-  padding: 0 20px;
+  padding: 0 24px;
   box-shadow: none;
   border: none;
   border-bottom: 1px solid var(--border);
@@ -958,10 +962,10 @@ tr.row-active > td {
 .carousel-side:hover { opacity: 0.6; }
 
 .carousel-item img,
-.carousel-item video { width: 100%; height: 345px; object-fit: cover; display: block; }
+.carousel-item video { width: 100%; height: 300px; object-fit: cover; display: block; }
 
 .carousel-side img,
-.carousel-side video { height: 200px; }
+.carousel-side video { height: 175px; }
 
 @media (max-width: 480px) {
   .carousel-item img,
@@ -1202,7 +1206,7 @@ tr.row-active > td {
 }
 
 /* ── 캘린더 ── */
-#calendar-section { padding: 20px 18px 16px; }
+#calendar-section { padding: 16px 28px 14px; }
 
 .cal-header {
   display: flex;
@@ -1337,7 +1341,7 @@ tr.row-active > td {
 
 .cal-dot-more { font-size: 9px; color: var(--text-muted); line-height: 1; }
 
-#cal-day-panel { padding: 18px 20px; }
+#cal-day-panel { padding: 14px 28px; }
 
 .cal-day-header {
   display: flex;
