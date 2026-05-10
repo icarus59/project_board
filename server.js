@@ -35,6 +35,25 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
 // ════════════════════════════════
+//  반복 일정 날짜 생성 헬퍼
+// ════════════════════════════════
+
+function generateRecurringDates(startDate, recurrence) {
+  const counts = { weekly: 52, monthly: 12, yearly: 2 };
+  const count  = counts[recurrence] || 0;
+  const dates  = [];
+
+  for (let i = 1; i <= count; i++) {
+    const d = new Date(startDate + 'T00:00:00');
+    if (recurrence === 'weekly')  d.setDate(d.getDate() + 7 * i);
+    if (recurrence === 'monthly') d.setMonth(d.getMonth() + i);
+    if (recurrence === 'yearly')  d.setFullYear(d.getFullYear() + i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+// ════════════════════════════════
 //  DB 연결 & 테이블 초기화
 // ════════════════════════════════
 
@@ -202,6 +221,21 @@ async function initDB() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // recurrence 컬럼 추가 (calendar_events)
+  for (const [colName, colDef] of [
+    ['recurrence',          "VARCHAR(10) NOT NULL DEFAULT 'none'"],
+    ['recurrence_group_id', 'VARCHAR(50) DEFAULT NULL'],
+  ]) {
+    const [col] = await pool.execute(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'calendar_events' AND COLUMN_NAME = ?`,
+      [process.env.DB_NAME, colName]
+    );
+    if (col.length === 0) {
+      await pool.execute(`ALTER TABLE calendar_events ADD COLUMN ${colName} ${colDef}`);
+    }
+  }
 
   console.log('DB 연결 성공!');
 }
@@ -695,7 +729,7 @@ app.get('/api/calendar', authMiddleware, async function (req, res) {
 
 // C: 캘린더 일정 추가
 app.post('/api/calendar', authMiddleware, upload.single('file'), async function (req, res) {
-  const { title, description, event_date } = req.body;
+  const { title, description, event_date, recurrence } = req.body;
   if (!title || !event_date) {
     return res.status(400).json({ message: '제목과 날짜를 입력해주세요.' });
   }
@@ -719,10 +753,23 @@ app.post('/api/calendar', authMiddleware, upload.single('file'), async function 
     file_type = req.file.mimetype.startsWith('image/') ? 'image' : 'pdf';
   }
 
+  const rec     = ['weekly', 'monthly', 'yearly'].includes(recurrence) ? recurrence : 'none';
+  const groupId = rec !== 'none' ? `${req.userId}-${Date.now()}` : null;
+
   const [result] = await pool.execute(
-    'INSERT INTO calendar_events (user_id, title, description, event_date, file_url, file_name, file_type, key_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [req.userId, title, description || null, event_date, file_url, file_name, file_type, key_name]
+    'INSERT INTO calendar_events (user_id, title, description, event_date, file_url, file_name, file_type, key_name, recurrence, recurrence_group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [req.userId, title, description || null, event_date, file_url, file_name, file_type, key_name, rec, groupId]
   );
+
+  if (rec !== 'none') {
+    const dates = generateRecurringDates(event_date, rec);
+    for (const dateStr of dates) {
+      await pool.execute(
+        'INSERT INTO calendar_events (user_id, title, description, event_date, recurrence, recurrence_group_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.userId, title, description || null, dateStr, rec, groupId]
+      );
+    }
+  }
 
   const [rows] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [result.insertId]);
   res.status(201).json(rows[0]);
@@ -731,7 +778,7 @@ app.post('/api/calendar', authMiddleware, upload.single('file'), async function 
 // U: 캘린더 일정 수정
 app.put('/api/calendar/:id', authMiddleware, upload.single('file'), async function (req, res) {
   const id = Number(req.params.id);
-  const { title, description, event_date, remove_file } = req.body;
+  const { title, description, event_date, remove_file, scope } = req.body;
 
   const [existing] = await pool.execute(
     'SELECT * FROM calendar_events WHERE id = ? AND user_id = ?',
@@ -739,6 +786,16 @@ app.put('/api/calendar/:id', authMiddleware, upload.single('file'), async functi
   );
   if (existing.length === 0) {
     return res.status(404).json({ message: '일정을 찾을 수 없습니다.' });
+  }
+
+  // 반복 일정 전체 수정: 제목·메모만 일괄 업데이트 (날짜·파일은 각 인스턴스 유지)
+  if (scope === 'all' && existing[0].recurrence_group_id) {
+    await pool.execute(
+      'UPDATE calendar_events SET title = ?, description = ? WHERE recurrence_group_id = ? AND user_id = ?',
+      [title, description || null, existing[0].recurrence_group_id, req.userId]
+    );
+    const [rows] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [id]);
+    return res.json(rows[0]);
   }
 
   let { file_url, file_name, file_type, key_name } = existing[0];
@@ -779,24 +836,42 @@ app.put('/api/calendar/:id', authMiddleware, upload.single('file'), async functi
 
 // D: 캘린더 일정 삭제
 app.delete('/api/calendar/:id', authMiddleware, async function (req, res) {
-  const id = Number(req.params.id);
+  const id    = Number(req.params.id);
+  const scope = req.query.scope || 'single'; // 'single' | 'all'
 
   const [rows] = await pool.execute(
-    'SELECT key_name FROM calendar_events WHERE id = ? AND user_id = ?',
+    'SELECT key_name, recurrence_group_id FROM calendar_events WHERE id = ? AND user_id = ?',
     [id, req.userId]
   );
+  if (rows.length === 0) return res.json({ message: '삭제되었습니다.' });
 
-  if (rows.length > 0 && rows[0].key_name) {
-    await s3.send(new DeleteObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key:    rows[0].key_name,
-    }));
+  const { key_name, recurrence_group_id } = rows[0];
+
+  if (scope === 'all' && recurrence_group_id) {
+    // 그룹 내 파일 전체 삭제 후 DB 삭제
+    const [groupRows] = await pool.execute(
+      'SELECT key_name FROM calendar_events WHERE recurrence_group_id = ? AND user_id = ?',
+      [recurrence_group_id, req.userId]
+    );
+    for (const row of groupRows) {
+      if (row.key_name) {
+        await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: row.key_name }));
+      }
+    }
+    await pool.execute(
+      'DELETE FROM calendar_events WHERE recurrence_group_id = ? AND user_id = ?',
+      [recurrence_group_id, req.userId]
+    );
+  } else {
+    if (key_name) {
+      await s3.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key_name }));
+    }
+    await pool.execute(
+      'DELETE FROM calendar_events WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
   }
 
-  await pool.execute(
-    'DELETE FROM calendar_events WHERE id = ? AND user_id = ?',
-    [id, req.userId]
-  );
   res.json({ message: '삭제되었습니다.' });
 });
 

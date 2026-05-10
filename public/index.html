@@ -295,6 +295,15 @@
         <h2 id="cal-modal-heading">일정 추가</h2>
         <input type="text"  id="cal-event-title" placeholder="제목을 입력하세요" />
         <input type="date"  id="cal-event-date" />
+        <div class="cal-recurrence-row" id="cal-recurrence-row">
+          <label class="cal-recurrence-label">반복</label>
+          <select id="cal-event-recurrence" class="cal-recurrence-select">
+            <option value="none">반복 없음</option>
+            <option value="weekly">매주</option>
+            <option value="monthly">매월</option>
+            <option value="yearly">매년</option>
+          </select>
+        </div>
         <textarea id="cal-event-desc" placeholder="메모 (선택)"></textarea>
         <div class="cal-file-section">
           <label class="cal-file-label">

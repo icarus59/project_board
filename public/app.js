@@ -1188,14 +1188,15 @@ document.getElementById('family-search-input').addEventListener('keydown', async
 //  캘린더
 // ════════════════════════════════
 
-let calYear          = new Date().getFullYear();
-let calMonth         = new Date().getMonth() + 1;
-let calEvents        = [];
-let calSelectedDate  = null;
-let calEditingId     = null;
-let calSelectedFile  = null;
-let calFileRemoved   = false;
-let calOriginalFileUrl = null;
+let calYear               = new Date().getFullYear();
+let calMonth              = new Date().getMonth() + 1;
+let calEvents             = [];
+let calSelectedDate       = null;
+let calEditingId          = null;
+let calSelectedFile       = null;
+let calFileRemoved        = false;
+let calOriginalFileUrl    = null;
+let calRecurrenceGroupId  = null;
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -1268,7 +1269,7 @@ function renderCalendar() {
       // 첫 이벤트 제목 미리보기 (데스크탑)
       const label = document.createElement('div');
       label.className   = 'cal-event-chip';
-      label.textContent = evList[0].title;
+      label.textContent = (evList[0].recurrence !== 'none' ? '↺ ' : '') + evList[0].title;
       cell.appendChild(label);
       if (evList.length > 1) {
         const more = document.createElement('div');
@@ -1319,10 +1320,13 @@ function showDayPanel(dateStr) {
       }
     }
 
+    const recurBadge = ev.recurrence && ev.recurrence !== 'none'
+      ? `<span class="cal-recur-badge">${RECUR_LABEL[ev.recurrence]}</span>` : '';
+
     item.innerHTML = `
       <div class="cal-event-main">
         <div class="cal-event-info">
-          <strong class="cal-event-title-text">${ev.title}</strong>
+          <strong class="cal-event-title-text">${ev.title}${recurBadge}</strong>
           ${ev.description ? `<p class="cal-event-desc-text">${ev.description}</p>` : ''}
           ${fileHtml}
         </div>
@@ -1338,29 +1342,38 @@ function showDayPanel(dateStr) {
   });
 }
 
-function openCalEventModal(ev = null) {
-  calEditingId       = ev ? ev.id : null;
-  calSelectedFile    = null;
-  calFileRemoved     = false;
-  calOriginalFileUrl = ev ? ev.file_url : null;
+const RECUR_LABEL = { weekly: '매주', monthly: '매월', yearly: '매년' };
 
-  const titleInput = document.getElementById('cal-event-title');
-  const dateInput  = document.getElementById('cal-event-date');
-  const descInput  = document.getElementById('cal-event-desc');
-  const fileInput  = document.getElementById('cal-event-file');
-  const deleteBtn  = document.getElementById('cal-modal-delete-btn');
-  const preview    = document.getElementById('cal-file-preview');
-  const heading    = document.getElementById('cal-modal-heading');
+function openCalEventModal(ev = null) {
+  calEditingId          = ev ? ev.id : null;
+  calSelectedFile       = null;
+  calFileRemoved        = false;
+  calOriginalFileUrl    = ev ? ev.file_url : null;
+  calRecurrenceGroupId  = ev ? (ev.recurrence_group_id || null) : null;
+
+  const titleInput     = document.getElementById('cal-event-title');
+  const dateInput      = document.getElementById('cal-event-date');
+  const descInput      = document.getElementById('cal-event-desc');
+  const fileInput      = document.getElementById('cal-event-file');
+  const deleteBtn      = document.getElementById('cal-modal-delete-btn');
+  const preview        = document.getElementById('cal-file-preview');
+  const heading        = document.getElementById('cal-modal-heading');
+  const recurrenceRow  = document.getElementById('cal-recurrence-row');
+  const recurrenceSel  = document.getElementById('cal-event-recurrence');
 
   fileInput.value   = '';
   preview.innerHTML = '';
 
   if (ev) {
-    heading.textContent    = '일정 수정';
-    titleInput.value       = ev.title;
-    dateInput.value        = ev.event_date.slice(0, 10);
-    descInput.value        = ev.description || '';
+    heading.textContent     = '일정 수정';
+    titleInput.value        = ev.title;
+    dateInput.value         = ev.event_date.slice(0, 10);
+    descInput.value         = ev.description || '';
     deleteBtn.style.display = 'inline-block';
+    // 수정 시 반복 설정 변경 불가 — 현재 값 표시만
+    recurrenceRow.style.display = ev.recurrence && ev.recurrence !== 'none' ? 'flex' : 'none';
+    recurrenceSel.value         = ev.recurrence || 'none';
+    recurrenceSel.disabled      = true;
 
     if (ev.file_url) {
       if (ev.file_type === 'image') {
@@ -1376,11 +1389,14 @@ function openCalEventModal(ev = null) {
       });
     }
   } else {
-    heading.textContent     = '일정 추가';
-    titleInput.value        = '';
-    dateInput.value         = calSelectedDate || '';
-    descInput.value         = '';
-    deleteBtn.style.display = 'none';
+    heading.textContent         = '일정 추가';
+    titleInput.value            = '';
+    dateInput.value             = calSelectedDate || '';
+    descInput.value             = '';
+    deleteBtn.style.display     = 'none';
+    recurrenceRow.style.display = 'flex';
+    recurrenceSel.value         = 'none';
+    recurrenceSel.disabled      = false;
   }
 
   document.getElementById('cal-event-modal').style.display = 'flex';
@@ -1408,6 +1424,7 @@ document.getElementById('cal-modal-save-btn').addEventListener('click', async fu
   const title   = document.getElementById('cal-event-title').value.trim();
   const dateVal = document.getElementById('cal-event-date').value;
   const desc    = document.getElementById('cal-event-desc').value.trim();
+  const recSel  = document.getElementById('cal-event-recurrence');
 
   if (!title || !dateVal) {
     alert('제목과 날짜를 입력해주세요.');
@@ -1419,11 +1436,22 @@ document.getElementById('cal-modal-save-btn').addEventListener('click', async fu
   formData.append('event_date', dateVal);
   if (desc) formData.append('description', desc);
 
+  if (!calEditingId) {
+    formData.append('recurrence', recSel.value);
+  }
+
   if (calSelectedFile) {
     formData.append('file', calSelectedFile);
   } else if (calEditingId && calFileRemoved) {
     formData.append('remove_file', '1');
   }
+
+  let scope = 'single';
+  if (calEditingId && calRecurrenceGroupId) {
+    const all = confirm('반복 일정을 모두 수정할까요?\n확인: 전체 수정 / 취소: 이 일정만 수정');
+    scope = all ? 'all' : 'single';
+  }
+  if (calEditingId) formData.append('scope', scope);
 
   const url    = calEditingId ? `${API_URL}/api/calendar/${calEditingId}` : `${API_URL}/api/calendar`;
   const method = calEditingId ? 'PUT' : 'POST';
@@ -1441,7 +1469,14 @@ document.getElementById('cal-modal-save-btn').addEventListener('click', async fu
 // 일정 삭제
 document.getElementById('cal-modal-delete-btn').addEventListener('click', async function () {
   if (!confirm('이 일정을 삭제하시겠습니까?')) return;
-  await fetch(`${API_URL}/api/calendar/${calEditingId}`, {
+
+  let scope = 'single';
+  if (calRecurrenceGroupId) {
+    const all = confirm('반복 일정을 모두 삭제할까요?\n확인: 전체 삭제 / 취소: 이 일정만 삭제');
+    scope = all ? 'all' : 'single';
+  }
+
+  await fetch(`${API_URL}/api/calendar/${calEditingId}?scope=${scope}`, {
     method:  'DELETE',
     headers: authHeaders(),
   });

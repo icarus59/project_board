@@ -1512,6 +1512,50 @@ tr.row-active > td {
 
 .cal-event-modal-box { max-width: 420px; }
 
+.cal-recurrence-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cal-recurrence-label {
+  font-size: 13px;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 28px;
+}
+
+.cal-recurrence-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.cal-recurrence-select:focus  { border-color: var(--accent); }
+.cal-recurrence-select:disabled { opacity: 0.65; cursor: default; }
+
+.cal-recur-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  background: var(--primary-light);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  vertical-align: middle;
+}
+
 .cal-file-section { margin-bottom: 12px; }
 
 .cal-file-label {
