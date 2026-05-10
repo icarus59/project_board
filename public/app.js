@@ -900,6 +900,104 @@ document.getElementById('family-cancel-btn').addEventListener('click', function 
 //  가족 게시판
 // ════════════════════════════════
 
+async function renderComments(postId, listEl) {
+  const res      = await fetch(`${API_URL}/api/family-posts/${postId}/comments`, { headers: authHeaders() });
+  const comments = await res.json();
+
+  if (comments.length === 0) {
+    listEl.innerHTML = '<p class="comment-empty">아직 댓글이 없어요. 첫 댓글을 남겨보세요!</p>';
+    return;
+  }
+
+  listEl.innerHTML = comments.map(function (c) {
+    const deleteBtnHtml = c.author === getUsername()
+      ? `<button class="comment-delete-btn" data-id="${c.id}">삭제</button>`
+      : '';
+    return `
+      <div class="comment-item">
+        <div class="comment-header">
+          <span class="comment-author">${c.author}</span>
+          <span class="comment-date">${c.date}</span>
+          ${deleteBtnHtml}
+        </div>
+        <p class="comment-content">${c.content}</p>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.comment-delete-btn').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      const commentId = Number(this.dataset.id);
+      await fetch(`${API_URL}/api/family-posts/${postId}/comments/${commentId}`, {
+        method:  'DELETE',
+        headers: authHeaders(),
+      });
+      await renderComments(postId, listEl);
+    });
+  });
+}
+
+async function toggleFamilyDetail(tr) {
+  const next   = tr.nextElementSibling;
+  const isOpen = next && next.classList.contains('detail-row');
+
+  document.querySelectorAll('.detail-row').forEach(function (r) { r.remove(); });
+  document.querySelectorAll('tr.row-active').forEach(function (r) { r.classList.remove('row-active'); });
+
+  if (!isOpen) {
+    const postId   = Number(tr.dataset.id);
+    const detailTr = document.createElement('tr');
+    detailTr.classList.add('detail-row');
+    detailTr.innerHTML = `
+      <td colspan="4">
+        <div class="detail-content">
+          <h3>${tr.dataset.title}</h3>
+          <p>${tr.dataset.content}</p>
+          <small>${tr.dataset.date}</small>
+          <div class="comment-section">
+            <p class="comment-section-title">댓글</p>
+            <div class="comment-list"></div>
+            <div class="comment-form">
+              <input type="text" class="comment-input" placeholder="댓글을 입력하세요" />
+              <button class="comment-submit-btn">등록</button>
+            </div>
+          </div>
+        </div>
+      </td>
+    `;
+
+    tr.insertAdjacentElement('afterend', detailTr);
+    tr.classList.add('row-active');
+
+    const listEl    = detailTr.querySelector('.comment-list');
+    const input     = detailTr.querySelector('.comment-input');
+    const submitBtn = detailTr.querySelector('.comment-submit-btn');
+
+    await renderComments(postId, listEl);
+
+    async function submitComment() {
+      const content = input.value.trim();
+      if (!content) return;
+      input.disabled    = true;
+      submitBtn.disabled = true;
+      await fetch(`${API_URL}/api/family-posts/${postId}/comments`, {
+        method:  'POST',
+        headers: authHeaders(),
+        body:    JSON.stringify({ content }),
+      });
+      input.value        = '';
+      input.disabled     = false;
+      submitBtn.disabled = false;
+      await renderComments(postId, listEl);
+    }
+
+    submitBtn.addEventListener('click', submitComment);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitComment();
+    });
+  }
+}
+
 let familyEditingId = null;
 const familyPostList = document.getElementById('family-post-list');
 
@@ -1028,7 +1126,7 @@ familyPostList.addEventListener('click', async function (event) {
   const id  = Number(btn.dataset.id);
 
   if (btn.classList.contains('diary-title')) {
-    toggleDetail(btn.closest('tr'));
+    await toggleFamilyDetail(btn.closest('tr'));
     return;
   }
 

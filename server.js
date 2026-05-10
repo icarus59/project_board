@@ -173,7 +173,21 @@ async function initDB() {
     }
   }
 
-  // 9단계: calendar_events 테이블 생성
+  // 9단계: comments 테이블 생성
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id      INT          AUTO_INCREMENT PRIMARY KEY,
+      post_id INT          NOT NULL,
+      user_id INT          NOT NULL,
+      author  VARCHAR(50)  NOT NULL,
+      content TEXT         NOT NULL,
+      date    VARCHAR(50)  NOT NULL,
+      FOREIGN KEY (post_id) REFERENCES family_posts(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // 10단계: calendar_events 테이블 생성
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS calendar_events (
       id          INT          AUTO_INCREMENT PRIMARY KEY,
@@ -319,6 +333,8 @@ app.delete('/api/auth/me', authMiddleware, async function (req, res) {
   await pool.execute('DELETE FROM diaries         WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM images          WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM family_photos   WHERE user_id = ?', [req.userId]);
+  await pool.execute('DELETE FROM comments        WHERE post_id IN (SELECT id FROM family_posts WHERE user_id = ?)', [req.userId]);
+  await pool.execute('DELETE FROM comments        WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM family_posts    WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM calendar_events WHERE user_id = ?', [req.userId]);
   await pool.execute('DELETE FROM users           WHERE id = ?',      [req.userId]);
@@ -605,9 +621,56 @@ app.put('/api/family-posts/:id', authMiddleware, async function (req, res) {
 // D: 가족 게시판 글 삭제
 app.delete('/api/family-posts/:id', authMiddleware, async function (req, res) {
   const id = Number(req.params.id);
+  await pool.execute('DELETE FROM comments WHERE post_id = ?', [id]);
   await pool.execute(
     'DELETE FROM family_posts WHERE id = ? AND user_id = ?',
     [id, req.userId]
+  );
+  res.json({ message: '삭제되었습니다.' });
+});
+
+// ════════════════════════════════
+//  댓글 API — 로그인 필요
+// ════════════════════════════════
+
+// R: 댓글 목록 조회
+app.get('/api/family-posts/:id/comments', authMiddleware, async function (req, res) {
+  const postId = Number(req.params.id);
+  const [rows] = await pool.execute(
+    'SELECT * FROM comments WHERE post_id = ? ORDER BY id ASC',
+    [postId]
+  );
+  res.json(rows);
+});
+
+// C: 댓글 작성
+app.post('/api/family-posts/:id/comments', authMiddleware, async function (req, res) {
+  const postId = Number(req.params.id);
+  const { content } = req.body;
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ message: '댓글 내용을 입력해주세요.' });
+  }
+
+  const [userRows] = await pool.execute('SELECT username FROM users WHERE id = ?', [req.userId]);
+  const author = userRows[0]?.username || '알 수 없음';
+  const date   = new Date().toLocaleDateString('ko-KR');
+
+  const [result] = await pool.execute(
+    'INSERT INTO comments (post_id, user_id, author, content, date) VALUES (?, ?, ?, ?, ?)',
+    [postId, req.userId, author, content.trim(), date]
+  );
+
+  const [rows] = await pool.execute('SELECT * FROM comments WHERE id = ?', [result.insertId]);
+  res.status(201).json(rows[0]);
+});
+
+// D: 댓글 삭제 (본인만)
+app.delete('/api/family-posts/:postId/comments/:commentId', authMiddleware, async function (req, res) {
+  const commentId = Number(req.params.commentId);
+  await pool.execute(
+    'DELETE FROM comments WHERE id = ? AND user_id = ?',
+    [commentId, req.userId]
   );
   res.json({ message: '삭제되었습니다.' });
 });

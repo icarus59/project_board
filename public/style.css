@@ -840,6 +840,111 @@ tr.row-active > td {
   #delete-photo-btn { font-size: 12px; padding: 5px 12px; }
 }
 
+/* ── 댓글 ── */
+.comment-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.comment-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.comment-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+.comment-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-item:last-child { border-bottom: none; }
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.comment-author {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.comment-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.comment-delete-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition);
+  font-family: inherit;
+}
+
+.comment-delete-btn:hover { color: var(--danger); }
+
+.comment-content {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.comment-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.comment-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  transition: border-color var(--transition);
+}
+
+.comment-input:focus { border-color: var(--accent); }
+
+.comment-submit-btn {
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+
+.comment-submit-btn:hover    { background: var(--primary-dark); }
+.comment-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── 탭 메뉴 ── */
 .tab-menu {
   display: flex;
