@@ -137,6 +137,15 @@ async function deleteDiary(id) {
 const diaryList = document.getElementById('diary-list');
 let editingId = null;
 
+const rowObserver = new IntersectionObserver(function (entries) {
+  entries.forEach(function (entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      rowObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
 async function renderDiaries(searchTerm = '', searchType = 'title') {
   const diaries = await fetchDiaries();
   diaryList.innerHTML = '';
@@ -150,7 +159,9 @@ async function renderDiaries(searchTerm = '', searchType = 'title') {
   if (filtered.length === 0) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="4" class="board-empty">등록된 일기가 없어요.</td>`;
+    tr.classList.add('row-fade');
     diaryList.appendChild(tr);
+    rowObserver.observe(tr);
     return;
   }
 
@@ -172,7 +183,9 @@ async function renderDiaries(searchTerm = '', searchType = 'title') {
       <td class="col-author">${getUsername()}</td>
       <td class="col-date">${diary.date}</td>
     `;
+    tr.classList.add('row-fade');
     diaryList.appendChild(tr);
+    rowObserver.observe(tr);
   });
 }
 
@@ -224,7 +237,7 @@ async function fetchPhotos() {
 }
 
 // 슬라이드 화면 업데이트
-function renderSlide() {
+function renderSlide(animate) {
   const img      = document.getElementById('slide-img');
   const noMsg    = document.getElementById('no-photo-msg');
   const counter  = document.getElementById('slide-counter');
@@ -235,13 +248,25 @@ function renderSlide() {
     noMsg.style.display = 'block';
     counter.textContent = '';
     if (exifInfo) exifInfo.innerHTML = '';
+    return;
+  }
+
+  const photo = photos[current];
+  noMsg.style.display = 'none';
+  counter.textContent = `${current + 1} / ${photos.length}`;
+  if (exifInfo) exifInfo.innerHTML = buildExifHtml(photo);
+
+  if (animate && img.style.display !== 'none') {
+    img.style.opacity = '0';
+    setTimeout(function () {
+      img.src = photo.url;
+      img.onload  = function () { img.style.opacity = '1'; };
+      img.onerror = function () { img.style.opacity = '1'; };
+    }, 450);
   } else {
-    const photo         = photos[current];
-    img.src             = photo.url;
-    img.style.display   = 'block';
-    noMsg.style.display = 'none';
-    counter.textContent = `${current + 1} / ${photos.length}`;
-    if (exifInfo) exifInfo.innerHTML = buildExifHtml(photo);
+    img.src           = photo.url;
+    img.style.display = 'block';
+    img.style.opacity = '1';
   }
 }
 
@@ -256,14 +281,14 @@ async function loadPhotos() {
 document.getElementById('prev-btn').addEventListener('click', function () {
   if (photos.length === 0) return;
   current = (current - 1 + photos.length) % photos.length;
-  renderSlide();
+  renderSlide(true);
 });
 
 // ▶ 다음 버튼
 document.getElementById('next-btn').addEventListener('click', function () {
   if (photos.length === 0) return;
   current = (current + 1) % photos.length;
-  renderSlide();
+  renderSlide(true);
 });
 
 // EXIF 메타정보 읽기 (압축 전 원본 파일에서 호출)
@@ -626,27 +651,40 @@ document.getElementById('bulk-delete-btn').addEventListener('click', async funct
 //  탭 전환
 // ════════════════════════════════
 
+const TAB_ORDER = ['family', 'diary', 'calendar'];
+let currentTab  = 'family';
+
+const tabEls = {
+  diary:    document.getElementById('tab-diary'),
+  family:   document.getElementById('tab-family'),
+  calendar: document.getElementById('tab-calendar'),
+};
+
 document.querySelectorAll('.tab-btn').forEach(function (btn) {
   btn.addEventListener('click', function () {
+    const newTab = this.dataset.tab;
+    if (newTab === currentTab) return;
+
+    const prevIdx    = TAB_ORDER.indexOf(currentTab);
+    const nextIdx    = TAB_ORDER.indexOf(newTab);
+    const enterClass = nextIdx > prevIdx ? 'tab-enter-right' : 'tab-enter-left';
+
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     this.classList.add('active');
 
-    const tab = this.dataset.tab;
-    document.getElementById('tab-diary').style.display    = tab === 'diary'     ? 'block' : 'none';
-    document.getElementById('tab-family').style.display   = tab === 'family'    ? 'block' : 'none';
-    document.getElementById('tab-calendar').style.display = tab === 'calendar'  ? 'block' : 'none';
+    tabEls[currentTab].style.display = 'none';
 
-    if (tab === 'family') {
-      loadFamilyPhotos();
-      renderFamilyPosts();
-    }
-    if (tab === 'diary') {
-      loadPhotos();
-      renderDiaries();
-    }
-    if (tab === 'calendar') {
-      loadCalendarEvents();
-    }
+    const newEl = tabEls[newTab];
+    newEl.classList.remove('tab-enter-left', 'tab-enter-right');
+    newEl.style.display = 'block';
+    void newEl.offsetWidth; // reflow 강제 → 애니메이션 재시작
+    newEl.classList.add(enterClass);
+
+    currentTab = newTab;
+
+    if (newTab === 'family')   { loadFamilyPhotos(); renderFamilyPosts(); }
+    if (newTab === 'diary')    { loadPhotos(); renderDiaries(); }
+    if (newTab === 'calendar') { loadCalendarEvents(); }
   });
 });
 
@@ -1019,7 +1057,9 @@ async function renderFamilyPosts(searchTerm = '', searchType = 'title') {
   if (filtered.length === 0) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="4" class="board-empty">등록된 글이 없어요.</td>`;
+    tr.classList.add('row-fade');
     familyPostList.appendChild(tr);
+    rowObserver.observe(tr);
     return;
   }
 
@@ -1041,7 +1081,9 @@ async function renderFamilyPosts(searchTerm = '', searchType = 'title') {
       <td class="col-author">${post.author}</td>
       <td class="col-date">${post.date}</td>
     `;
+    tr.classList.add('row-fade');
     familyPostList.appendChild(tr);
+    rowObserver.observe(tr);
   });
 }
 
@@ -1238,6 +1280,7 @@ function renderCalendar() {
     const dow     = (firstDay + d - 1) % 7;
     const cell    = document.createElement('div');
     cell.className = 'cal-cell';
+    cell.style.animation = `calCellEnter 0.28s ease both ${((firstDay + d - 1) * 0.012).toFixed(3)}s`;
     if (dateStr === todayStr)       cell.classList.add('cal-today');
     if (dateStr === calSelectedDate) cell.classList.add('cal-selected');
 
