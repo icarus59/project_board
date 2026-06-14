@@ -1674,3 +1674,131 @@ if (getToken()) {
   showAuth();
   loadUserCount();
 }
+
+// ════════════════════════════════
+//  파티클 네트워크 배경 (마우스 패럴랙스)
+// ════════════════════════════════
+
+(function () {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  const PARTICLE_COUNT  = 65;
+  const CONNECT_DIST    = 160;
+  const PARALLAX_STRENGTH = 70;
+
+  let particles = [];
+  let targetX = 0, targetY = 0;
+  let currentX = 0, currentY = 0;
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const isBlue   = Math.random() < 0.55;
+      const blurPick = [0, 0, 0, 4, 4, 9];
+      const blur     = blurPick[Math.floor(Math.random() * blurPick.length)];
+      particles.push({
+        x:  Math.random() * canvas.width,
+        y:  Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.28,
+        vy: (Math.random() - 0.5) * 0.28,
+        r:  isBlue
+              ? Math.random() * 24 + 10
+              : Math.random() * 16 + 8,
+        color: isBlue
+          ? `rgba(96, 112, 178, ${(Math.random() * 0.45 + 0.35).toFixed(2)})`
+          : `rgba(210, 138, 112, ${(Math.random() * 0.4  + 0.3 ).toFixed(2)})`,
+        blur,
+      });
+    }
+    // blur 순으로 정렬 → filter 전환 횟수 최소화
+    particles.sort((a, b) => a.blur - b.blur);
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function frame() {
+    // 부드러운 패럴랙스 (지연 추적)
+    currentX = lerp(currentX, targetX, 0.1);
+    currentY = lerp(currentY, targetY, 0.1);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 배경 그라디언트
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#ede9e3');
+    grad.addColorStop(1, '#e2ddd6');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 파티클 레이어 — 패럴랙스 오프셋 적용
+    ctx.save();
+    ctx.translate(currentX, currentY);
+
+    // 연결선
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx   = particles[i].x - particles[j].x;
+        const dy   = particles[i].y - particles[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < CONNECT_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(140, 145, 175, ${((1 - dist / CONNECT_DIST) * 0.72).toFixed(2)})`;
+          ctx.lineWidth   = 0.85;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // 파티클 원 (shadowBlur로 아웃포커싱 — blur 그룹별 일괄 적용)
+    let lastBlur = -1;
+    for (const p of particles) {
+      if (p.blur !== lastBlur) {
+        ctx.shadowBlur  = p.blur * 5;
+        ctx.shadowColor = 'rgba(140,145,175,0.55)';
+        ctx.globalAlpha = p.blur > 5 ? 0.38 : p.blur > 0 ? 0.62 : 1;
+        lastBlur = p.blur;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    }
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+
+    // 위치 업데이트 (화면 밖 나가면 반대편으로)
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < -60)              p.x = canvas.width  + 60;
+      if (p.x > canvas.width  + 60) p.x = -60;
+      if (p.y < -60)              p.y = canvas.height + 60;
+      if (p.y > canvas.height + 60) p.y = -60;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  document.addEventListener('mousemove', e => {
+    const cx = window.innerWidth  / 2;
+    const cy = window.innerHeight / 2;
+    targetX  = ((e.clientX - cx) / cx) * PARALLAX_STRENGTH;
+    targetY  = ((e.clientY - cy) / cy) * PARALLAX_STRENGTH;
+  });
+
+  window.addEventListener('resize', () => { resize(); initParticles(); });
+
+  resize();
+  initParticles();
+  frame();
+})();

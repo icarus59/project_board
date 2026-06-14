@@ -26,13 +26,17 @@
 
 body {
   font-family: 'Pretendard', 'Inter', 'Noto Sans KR', '맑은 고딕', sans-serif;
-  background: linear-gradient(135deg, #ddd8d0, #d4d0c8, #e2ddd6, #d9d3cb);
-  background-size: 400% 400%;
-  animation: bgShift 28s ease infinite;
+  background: transparent;
   min-height: 100vh;
   margin: 0;
   padding: 24px 20px 40px;
   color: var(--text);
+}
+
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
 }
 
 h1 {
