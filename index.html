@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>나의 다이어리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- 로그인 화면 -->
+  <div id="auth-section">
+    <h1>나의 다이어리</h1>
+
+    <div class="auth-box" id="login-form">
+      <h2>로그인</h2>
+      <input type="text"     id="login-username" placeholder="아이디" />
+      <input type="password" id="login-password" placeholder="비밀번호" />
+      <button id="login-btn">로그인</button>
+      <p class="auth-switch">계정이 없으신가요? <a href="#" id="show-register">회원가입</a></p>
+      <p id="user-count-text" class="user-count-text"></p>
+    </div>
+  </div>
+
+  <!-- 회원가입 모달 -->
+  <div id="register-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <button id="modal-close-btn" class="modal-close">✕</button>
+      <h2>회원가입</h2>
+      <input type="text"     id="register-username"   placeholder="아이디" />
+      <input type="password" id="register-password"   placeholder="비밀번호" />
+      <input type="tel"      id="register-phone"      placeholder="전화번호 (예: 010-1234-5678)" />
+      <input type="date"     id="register-birth-date" placeholder="생년월일" />
+      <button id="register-btn">가입 완료</button>
+    </div>
+  </div>
+
+  <!-- 마이페이지 모달 -->
+  <div id="mypage-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <button id="mypage-close-btn" class="modal-close">✕</button>
+      <h2>마이페이지</h2>
+      <div class="mypage-info">
+        <div class="mypage-row">
+          <span class="mypage-label">아이디</span>
+          <span id="mypage-username" class="mypage-value"></span>
+        </div>
+        <div class="mypage-row">
+          <span class="mypage-label">전화번호</span>
+          <span id="mypage-phone" class="mypage-value"></span>
+        </div>
+        <div class="mypage-row">
+          <span class="mypage-label">생년월일</span>
+          <span id="mypage-birth" class="mypage-value"></span>
+        </div>
+      </div>
+      <div class="mypage-danger">
+        <p class="danger-title">계정 탈퇴</p>
+        <p class="danger-desc">탈퇴 시 모든 일기, 사진, 가족앨범이 영구 삭제됩니다.</p>
+        <button id="withdraw-btn" class="withdraw-btn">회원 탈퇴</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 다이어리 메인 화면 (로그인 후 표시) -->
+  <div id="app-section" style="display:none">
+
+    <div class="app-header">
+      <h1>나의 다이어리</h1>
+      <div class="header-right">
+        <span id="welcome-text"></span>
+        <button id="mypage-btn">마이페이지</button>
+        <button id="logout-btn">로그아웃</button>
+      </div>
+    </div>
+
+    <!-- 탭 메뉴 -->
+    <div class="tab-menu">
+      <button class="tab-btn active" data-tab="family">가족앨범</button>
+      <button class="tab-btn" data-tab="diary">다이어리</button>
+      <button class="tab-btn" data-tab="calendar">캘린더</button>
+    </div>
+
+    <!-- 다이어리 탭 -->
+    <div id="tab-diary" style="display:none">
+
+    <!-- 사진 슬라이드 영역 -->
+    <section id="photo-section">
+      <!-- 헤더: 제목 + 업로드 버튼 -->
+      <div class="family-header">
+        <h2>사진 앨범</h2>
+        <label id="upload-label">
+          + 사진 추가
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none" />
+        </label>
+      </div>
+
+      <!-- 슬라이드 창 -->
+      <div id="slideshow">
+        <button id="prev-btn">&#8249;</button>
+        <div id="slide-display">
+          <p id="no-photo-msg">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
+          <img id="slide-img" src="" alt="사진" loading="lazy" style="display:none" />
+        </div>
+        <button id="next-btn">&#8250;</button>
+      </div>
+
+      <!-- 사진 개수 표시 -->
+      <p id="slide-counter" class="family-counter"></p>
+
+      <!-- EXIF 메타정보 표시 -->
+      <div id="photo-exif-info" class="photo-exif-info"></div>
+
+      <!-- 삭제 버튼 -->
+      <div id="photo-btns">
+        <button id="delete-photo-btn">현재 사진 삭제</button>
+      </div>
+    </section>
+
+    <!-- 게시판: 글쓰기 + 목록 통합 -->
+    <section class="board-section">
+
+      <!-- 제목 + 검색 한 줄 -->
+      <div class="board-title-bar">
+        <h2>일기 게시판</h2>
+        <div class="search-group">
+          <select id="search-type">
+            <option value="title">제목</option>
+            <option value="content">내용</option>
+          </select>
+          <input type="text" id="search-input" placeholder="검색" />
+          <button id="search-btn" style="display:none">검색</button>
+        </div>
+      </div>
+
+      <!-- 글쓰기 / 수정 패널 (기본 숨김) -->
+      <div class="board-write" id="write-panel">
+        <h2 id="write-panel-title">일기 쓰기</h2>
+        <input type="text" id="title-input" placeholder="제목을 입력하세요" />
+        <textarea id="content-input" placeholder="오늘 있었던 일을 적어보세요"></textarea>
+        <div class="write-footer">
+          <button id="cancel-write-btn" class="cancel-btn">취소</button>
+          <button id="save-btn">저장하기</button>
+        </div>
+      </div>
+
+      <!-- 게시판 테이블 -->
+      <table class="board-table">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="check-all" /></th>
+            <th class="col-title">제목</th>
+            <th class="col-author">작성자</th>
+            <th class="col-date">날짜</th>
+          </tr>
+        </thead>
+        <tbody id="diary-list"></tbody>
+      </table>
+
+      <!-- 하단 버튼 -->
+      <div class="board-footer">
+        <button id="bulk-delete-btn" class="delete-btn">삭제</button>
+        <button id="write-toggle-btn">글쓰기</button>
+      </div>
+
+    </section>
+
+    </div><!-- /tab-diary -->
+
+    <!-- 가족앨범 탭 -->
+    <div id="tab-family">
+      <section id="family-section">
+        <div class="family-header">
+          <h2>가족앨범</h2>
+          <label class="family-upload-label">
+            사진/동영상 추가
+            <input type="file" id="family-photo-input" accept="image/*,video/*" multiple style="display:none" />
+          </label>
+        </div>
+
+        <!-- 업로드 폼 (사진/동영상 선택 후 표시) -->
+        <div id="family-upload-form" style="display:none">
+          <!-- 선택된 파일 큐 -->
+          <div id="family-queue"></div>
+          <label class="family-add-more-label">
+            + 더 추가
+            <input type="file" id="family-photo-input-more" accept="image/*,video/*" style="display:none" />
+          </label>
+          <input type="text" id="family-description" placeholder="설명을 입력하세요 (선택)" />
+          <div class="family-form-btns">
+            <button id="family-cancel-btn" class="cancel-btn">취소</button>
+            <button id="family-save-btn">저장하기</button>
+          </div>
+        </div>
+
+        <!-- 캐러셀 -->
+        <div id="family-carousel">
+          <button id="family-prev-btn">&#8249;</button>
+          <div id="family-carousel-track"></div>
+          <button id="family-next-btn">&#8250;</button>
+        </div>
+        <p id="family-empty-msg" class="family-empty" style="display:none">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
+        <p id="family-counter" class="family-counter"></p>
+      </section>
+      <!-- 가족 게시판 -->
+      <section class="board-section">
+        <!-- 제목 + 검색 한 줄 -->
+        <div class="board-title-bar">
+          <h2>가족 게시판</h2>
+          <div class="search-group">
+            <select id="family-search-type">
+              <option value="title">제목</option>
+              <option value="content">내용</option>
+            </select>
+            <input type="text" id="family-search-input" placeholder="검색" />
+            <button id="family-search-btn" style="display:none">검색</button>
+          </div>
+        </div>
+
+        <!-- 글쓰기 / 수정 패널 -->
+        <div class="board-write" id="family-write-panel">
+          <h2 id="family-write-panel-title">글쓰기</h2>
+          <input type="text" id="family-title-input" placeholder="제목을 입력하세요" />
+          <textarea id="family-content-input" placeholder="내용을 입력하세요"></textarea>
+          <div class="write-footer">
+            <button id="family-cancel-write-btn" class="cancel-btn">취소</button>
+            <button id="family-save-post-btn">저장하기</button>
+          </div>
+        </div>
+
+        <!-- 게시판 테이블 -->
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="family-check-all" /></th>
+              <th class="col-title">제목</th>
+              <th class="col-author">작성자</th>
+              <th class="col-date">날짜</th>
+            </tr>
+          </thead>
+          <tbody id="family-post-list"></tbody>
+        </table>
+
+        <!-- 하단 버튼 -->
+        <div class="board-footer">
+          <button id="family-bulk-delete-btn" class="delete-btn">삭제</button>
+          <button id="family-write-toggle-btn">글쓰기</button>
+        </div>
+
+      </section>
+
+    </div><!-- /tab-family -->
+
+    <!-- 캘린더 탭 -->
+    <div id="tab-calendar" style="display:none">
+
+      <!-- 월 캘린더 -->
+      <section id="calendar-section">
+        <div class="cal-header">
+          <button id="cal-prev-month" class="cal-nav-btn">&#8249;</button>
+          <h2 id="cal-month-title"></h2>
+          <button id="cal-next-month" class="cal-nav-btn">&#8250;</button>
+        </div>
+        <div class="cal-weekdays">
+          <span class="cal-wday cal-wday-sun">일</span>
+          <span class="cal-wday">월</span>
+          <span class="cal-wday">화</span>
+          <span class="cal-wday">수</span>
+          <span class="cal-wday">목</span>
+          <span class="cal-wday">금</span>
+          <span class="cal-wday cal-wday-sat">토</span>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+      </section>
+
+      <!-- 선택 날짜 일정 패널 -->
+      <section id="cal-day-panel" style="display:none">
+        <div class="cal-day-header">
+          <h2 id="cal-day-title"></h2>
+          <button id="cal-add-event-btn">+ 일정 추가</button>
+        </div>
+        <div id="cal-event-list"></div>
+      </section>
+
+    </div><!-- /tab-calendar -->
+
+    <!-- 캘린더 일정 모달 -->
+    <div id="cal-event-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box cal-event-modal-box">
+        <button id="cal-modal-close" class="modal-close">✕</button>
+        <h2 id="cal-modal-heading">일정 추가</h2>
+        <input type="text"  id="cal-event-title" placeholder="제목을 입력하세요" />
+        <input type="date"  id="cal-event-date" />
+        <div class="cal-recurrence-row" id="cal-recurrence-row">
+          <label class="cal-recurrence-label">반복</label>
+          <select id="cal-event-recurrence" class="cal-recurrence-select">
+            <option value="none">반복 없음</option>
+            <option value="weekly">매주</option>
+            <option value="monthly">매월</option>
+            <option value="yearly">매년</option>
+          </select>
+        </div>
+        <textarea id="cal-event-desc" placeholder="메모 (선택)"></textarea>
+        <div class="cal-file-section">
+          <label class="cal-file-label">
+            파일 첨부 (이미지 / PDF)
+            <input type="file" id="cal-event-file" accept="image/*,.pdf" style="display:none" />
+          </label>
+          <div id="cal-file-preview"></div>
+        </div>
+        <div class="write-footer">
+          <button id="cal-modal-delete-btn" class="delete-btn" style="display:none">삭제</button>
+          <button id="cal-modal-cancel-btn" class="cancel-btn">취소</button>
+          <button id="cal-modal-save-btn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 가족앨범 상세 모달 -->
+    <div id="family-modal" class="modal-overlay" style="display:none">
+      <div class="family-modal-box">
+        <button id="family-modal-close" class="modal-close">✕</button>
+        <div id="family-modal-media"></div>
+        <div class="family-modal-info">
+          <p id="family-modal-date" class="family-card-date"></p>
+          <div id="family-modal-exif" class="family-modal-exif"></div>
+          <input type="text" id="family-modal-desc-input" placeholder="설명을 입력하세요" />
+          <div class="family-modal-btns">
+            <button id="family-modal-delete-btn" class="delete-btn">삭제</button>
+            <button id="family-modal-save-btn">수정 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 배경음악 플레이어 -->
+  <div id="music-player" class="music-player">
+    <button id="music-prev-btn" class="music-btn" title="이전 곡">⏮</button>
+    <button id="music-play-btn" class="music-btn music-play-btn" title="재생/일시정지">▶</button>
+    <button id="music-next-btn" class="music-btn" title="다음 곡">⏭</button>
+    <span id="music-track-name" class="music-track-name">♪ 배경음악</span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
