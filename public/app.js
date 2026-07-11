@@ -239,34 +239,45 @@ async function fetchPhotos() {
 // 슬라이드 화면 업데이트
 function renderSlide(animate) {
   const img      = document.getElementById('slide-img');
+  const vid      = document.getElementById('slide-video');
   const noMsg    = document.getElementById('no-photo-msg');
   const counter  = document.getElementById('slide-counter');
   const exifInfo = document.getElementById('photo-exif-info');
 
   if (photos.length === 0) {
     img.style.display   = 'none';
+    vid.style.display   = 'none';
     noMsg.style.display = 'block';
     counter.textContent = '';
     if (exifInfo) exifInfo.innerHTML = '';
     return;
   }
 
-  const photo = photos[current];
+  const photo   = photos[current];
+  const isVideo = photo.file_type === 'video';
   noMsg.style.display = 'none';
   counter.textContent = `${current + 1} / ${photos.length}`;
-  if (exifInfo) exifInfo.innerHTML = buildExifHtml(photo);
+  if (exifInfo) exifInfo.innerHTML = isVideo ? '' : buildExifHtml(photo);
 
-  if (animate && img.style.display !== 'none') {
-    img.style.opacity = '0';
-    setTimeout(function () {
-      img.src = photo.url;
-      img.onload  = function () { img.style.opacity = '1'; };
-      img.onerror = function () { img.style.opacity = '1'; };
-    }, 450);
+  if (isVideo) {
+    img.style.display = 'none';
+    vid.src           = photo.url;
+    vid.style.display = 'block';
   } else {
-    img.src           = photo.url;
-    img.style.display = 'block';
-    img.style.opacity = '1';
+    vid.style.display = 'none';
+    vid.src           = '';
+    if (animate && img.style.display !== 'none') {
+      img.style.opacity = '0';
+      setTimeout(function () {
+        img.src = photo.url;
+        img.onload  = function () { img.style.opacity = '1'; };
+        img.onerror = function () { img.style.opacity = '1'; };
+      }, 450);
+    } else {
+      img.src           = photo.url;
+      img.style.display = 'block';
+      img.style.opacity = '1';
+    }
   }
 }
 
@@ -356,7 +367,7 @@ function compressImage(file) {
   });
 }
 
-// 사진 올리기
+// 사진/동영상 올리기
 document.getElementById('photo-input').addEventListener('change', async function () {
   const files = Array.from(this.files);
   if (files.length === 0) return;
@@ -369,13 +380,19 @@ document.getElementById('photo-input').addEventListener('change', async function
       uploadLabel.childNodes[0].nodeValue = `업로드 중... (${i + 1}/${files.length})`;
     }
 
-    const exif       = await readExifData(files[i]);  // 압축 전 원본에서 EXIF 추출
-    const compressed = await compressImage(files[i]);
-    const formData   = new FormData();
-    formData.append('image', compressed);
-    if (exif.exif_date) formData.append('exif_date', exif.exif_date);
-    if (exif.exif_lat)  formData.append('exif_lat',  exif.exif_lat);
-    if (exif.exif_lon)  formData.append('exif_lon',  exif.exif_lon);
+    const isVideo  = files[i].type.startsWith('video/');
+    const formData = new FormData();
+
+    if (isVideo) {
+      formData.append('image', files[i]);
+    } else {
+      const exif       = await readExifData(files[i]);
+      const compressed = await compressImage(files[i]);
+      formData.append('image', compressed);
+      if (exif.exif_date) formData.append('exif_date', exif.exif_date);
+      if (exif.exif_lat)  formData.append('exif_lat',  exif.exif_lat);
+      if (exif.exif_lon)  formData.append('exif_lon',  exif.exif_lon);
+    }
 
     await fetch(`${API_URL}/api/images`, {
       method:  'POST',
@@ -386,10 +403,10 @@ document.getElementById('photo-input').addEventListener('change', async function
 
   uploadLabel.childNodes[0].nodeValue = originalText;
   await loadPhotos();
-  current = photos.length - 1;  // 방금 올린 마지막 사진으로 이동
+  current = photos.length - 1;
   renderSlide();
 
-  this.value = '';  // 같은 파일 다시 올릴 수 있게 초기화
+  this.value = '';
 });
 
 // 현재 사진 삭제

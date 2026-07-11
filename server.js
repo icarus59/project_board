@@ -168,6 +168,16 @@ async function initDB() {
     await pool.execute(`ALTER TABLE family_photos ADD COLUMN file_type VARCHAR(10) NOT NULL DEFAULT 'image'`);
   }
 
+  // file_type 컬럼 추가 (images 테이블)
+  const [fileTypeColImg] = await pool.execute(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'images' AND COLUMN_NAME = 'file_type'`,
+    [process.env.DB_NAME]
+  );
+  if (fileTypeColImg.length === 0) {
+    await pool.execute(`ALTER TABLE images ADD COLUMN file_type VARCHAR(10) NOT NULL DEFAULT 'image'`);
+  }
+
   // EXIF 컬럼 추가 (images 테이블)
   for (const colName of ['exif_date', 'exif_lat', 'exif_lon']) {
     const [exifCol] = await pool.execute(
@@ -463,7 +473,7 @@ app.delete('/api/diaries/:id', authMiddleware, async function (req, res) {
 // 내 사진 목록 조회
 app.get('/api/images', authMiddleware, async function (req, res) {
   const [rows] = await pool.execute(
-    'SELECT id, url, exif_date, exif_lat, exif_lon FROM images WHERE user_id = ? ORDER BY id ASC',
+    'SELECT id, url, file_type, exif_date, exif_lat, exif_lon FROM images WHERE user_id = ? ORDER BY id ASC',
     [req.userId]
   );
   res.json(rows);
@@ -476,7 +486,8 @@ app.post('/api/images', authMiddleware, upload.single('image'), async function (
   }
 
   const { exif_date, exif_lat, exif_lon } = req.body;
-  const keyName = `${req.userId}/${Date.now()}-${req.file.originalname}`;
+  const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
+  const keyName  = `${req.userId}/${Date.now()}-${req.file.originalname}`;
 
   const uploader = new Upload({
     client: s3,
@@ -493,11 +504,11 @@ app.post('/api/images', authMiddleware, upload.single('image'), async function (
   const url = `${process.env.R2_PUBLIC_URL}/${keyName}`;
 
   const [result] = await pool.execute(
-    'INSERT INTO images (user_id, url, key_name, exif_date, exif_lat, exif_lon) VALUES (?, ?, ?, ?, ?, ?)',
-    [req.userId, url, keyName, exif_date || null, exif_lat || null, exif_lon || null]
+    'INSERT INTO images (user_id, url, key_name, file_type, exif_date, exif_lat, exif_lon) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [req.userId, url, keyName, fileType, exif_date || null, exif_lat || null, exif_lon || null]
   );
 
-  res.status(201).json({ id: result.insertId, url, exif_date: exif_date || null, exif_lat: exif_lat || null, exif_lon: exif_lon || null });
+  res.status(201).json({ id: result.insertId, url, file_type: fileType, exif_date: exif_date || null, exif_lat: exif_lat || null, exif_lon: exif_lon || null });
 });
 
 // 사진 삭제

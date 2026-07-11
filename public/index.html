@@ -97,7 +97,7 @@
         <h2>사진 앨범</h2>
         <label id="upload-label">
           + 사진 추가
-          <input type="file" id="photo-input" accept="image/*" multiple style="display:none" />
+          <input type="file" id="photo-input" accept="image/*,video/*" multiple style="display:none" />
         </label>
       </div>
 
@@ -107,6 +107,7 @@
         <div id="slide-display">
           <p id="no-photo-msg">아직 사진이 없어요. 첫 번째 사진을 추가해보세요!</p>
           <img id="slide-img" src="" alt="사진" loading="lazy" style="display:none" />
+          <video id="slide-video" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
         </div>
         <button id="next-btn">&#8250;</button>
       </div>
